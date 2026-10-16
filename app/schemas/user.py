@@ -26,3 +26,8 @@ class UserRead(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class UserUpdate(BaseModel):
+    active: bool | None = None
+    system_role: SystemRole | None = None
