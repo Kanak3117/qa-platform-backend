@@ -1,5 +1,9 @@
 import uuid
+from collections.abc import Callable
 
+from sqlalchemy import select
+
+from app.models.project import Project, ProjectMember, ProjectRole
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -36,3 +40,38 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
             status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
         )
     return current_user
+
+
+def get_project_or_404(
+    project_id: uuid.UUID, db: Session = Depends(get_db)
+) -> Project:
+    project = db.get(Project, project_id)
+    if project is None or not project.active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+    return project
+
+
+def require_project_role(*allowed: ProjectRole) -> Callable:
+    def checker(
+        project: Project = Depends(get_project_or_404),
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> Project:
+        if current_user.system_role == SystemRole.ADMIN:
+            return project
+        member = db.scalar(
+            select(ProjectMember).where(
+                ProjectMember.project_id == project.id,
+                ProjectMember.user_id == current_user.id,
+            )
+        )
+        if member is None or (allowed and member.project_role not in allowed):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this project",
+            )
+        return project
+
+    return checker
