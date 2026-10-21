@@ -31,6 +31,13 @@ _SYSTEM_PROMPT = (
     "The rationale must be one short sentence."
 )
 
+_PRIORITY_FOR_SEVERITY = {
+    "Critical": "P0",
+    "High": "P1",
+    "Medium": "P2",
+    "Low": "P3",
+}
+
 
 def _call_model(description: str, title: str | None) -> dict:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
@@ -73,9 +80,16 @@ def analyze_bug(payload: AnalyzeBugRequest) -> AnalyzeBugResponse:
     try:
         result = AnalyzeBugResponse(
             **model_result,
-            duplicates=find_duplicate_suggestions(payload.description, payload.existing_bugs),
+            duplicates=find_duplicate_suggestions(
+                payload.description, payload.existing_bugs, title=payload.title
+            ),
         )
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI provider returned fields outside the allowed values.") from exc
+    if result.priority != _PRIORITY_FOR_SEVERITY[result.severity]:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI provider returned inconsistent severity and priority fields.",
+        )
     result.suggested_title = " ".join(result.suggested_title.split())[:120]
     return result
