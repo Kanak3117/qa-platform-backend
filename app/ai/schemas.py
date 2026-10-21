@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class BugCandidate(BaseModel):
@@ -8,11 +8,35 @@ class BugCandidate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(min_length=1, max_length=10_000)
 
+    @field_validator("id", "title", "description")
+    @classmethod
+    def trim_required_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
 
 class AnalyzeBugRequest(BaseModel):
     title: str | None = Field(default=None, max_length=200)
     description: str = Field(min_length=10, max_length=10_000)
     existing_bugs: list[BugCandidate] = Field(default_factory=list, max_length=500)
+
+    @field_validator("title")
+    @classmethod
+    def trim_optional_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+    @field_validator("description")
+    @classmethod
+    def trim_description(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
 
 
 class DuplicateSuggestion(BaseModel):
