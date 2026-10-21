@@ -1,0 +1,68 @@
+{
+  "dataset_name": "synthetic-mentor-smoke-v1",
+  "cases": [
+    {
+      "case_id": "PAY-01",
+      "title": "Checkout payment failure",
+      "description": "Checkout reports failure after charging the card, and no order appears.",
+      "expected_category": "API/Backend",
+      "expected_severity": "High",
+      "expected_priority": "P1",
+      "accepted_titles": [
+        "Checkout fails after payment",
+        "Payment is charged but checkout fails"
+      ],
+      "existing_bugs": [
+        {
+          "id": "BUG-101",
+          "title": "Card charged but order does not appear",
+          "description": "Payment is captured but checkout creates no order."
+        },
+        {
+          "id": "BUG-102",
+          "title": "Profile avatar upload fails",
+          "description": "Saving a new profile image returns an error."
+        }
+      ],
+      "expected_duplicate_ids": ["BUG-101"]
+    },
+    {
+      "case_id": "AUTH-01",
+      "title": "MFA login returns to sign-in",
+      "description": "A valid MFA code is accepted, but the user is redirected back to the sign-in page.",
+      "expected_category": "Authentication",
+      "expected_severity": "High",
+      "expected_priority": "P1",
+      "accepted_titles": [
+        "MFA login returns the user to sign-in"
+      ],
+      "existing_bugs": [
+        {
+          "id": "BUG-201",
+          "title": "Password reset email arrives late",
+          "description": "Password reset email delivery is delayed."
+        }
+      ],
+      "expected_duplicate_ids": []
+    },
+    {
+      "case_id": "UI-01",
+      "title": "Profile save button overlaps helper text",
+      "description": "The profile save button overlaps helper text on a narrow screen, but saving still works.",
+      "expected_category": "UI/UX",
+      "expected_severity": "Low",
+      "expected_priority": "P3",
+      "accepted_titles": [
+        "Profile save button overlaps helper text"
+      ],
+      "existing_bugs": [
+        {
+          "id": "BUG-301",
+          "title": "Search results are slow",
+          "description": "Search takes several seconds to return results."
+        }
+      ],
+      "expected_duplicate_ids": []
+    }
+  ]
+}
