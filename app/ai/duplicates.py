@@ -19,12 +19,19 @@ def _vector(tokens: list[str], document_frequency: Counter[str], count: int) -> 
     return {term: value / norm for term, value in vector.items()} if norm else {}
 
 
-def find_duplicate_suggestions(description: str, candidates: list[BugCandidate], *, threshold: float = 0.22, limit: int = 5) -> list[DuplicateSuggestion]:
+def find_duplicate_suggestions(
+    description: str,
+    candidates: list[BugCandidate],
+    *,
+    title: str | None = None,
+    threshold: float = 0.22,
+    limit: int = 5,
+) -> list[DuplicateSuggestion]:
     """Return likely matches, highest similarity first; never makes merge decisions."""
     if not candidates:
         return []
     docs = [_tokens(f"{item.title} {item.description}") for item in candidates]
-    all_docs = [_tokens(description), *docs]
+    all_docs = [_tokens(f"{title or ''} {description}"), *docs]
     df: Counter[str] = Counter()
     for tokens in all_docs:
         df.update(set(tokens))
