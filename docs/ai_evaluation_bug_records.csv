@@ -1,0 +1,11 @@
+project_name,bug_code,title,description,category,severity,priority
+Dailoqa QA Platform,BUG-001,Login button unresponsive,"Clicking Login with valid credentials produces no response.",Functional,High,High
+Dailoqa QA Platform,BUG-002,Password reset email missing,"The password reset request succeeds but no email is delivered.",Functional,Medium,Medium
+Dailoqa QA Platform,BUG-003,Dashboard application crash,"Opening the dashboard causes the application to crash for authenticated users.",Stability,Critical,High
+Dailoqa QA Platform,BUG-004,Mobile profile image distorted,"The profile image appears stretched on smaller mobile screens.",UI/UX,Low,Low
+Dailoqa QA Platform,BUG-005,Test suite creation returns 500,"Submitting a valid test suite creation request returns HTTP 500.",API,High,High
+Dailoqa QA Platform,BUG-006,Duplicate test cases created,"Refreshing after submitting a test case creates a duplicate record.",Data Integrity,Medium,Medium
+Dailoqa QA Platform,BUG-007,Unauthorized admin access,"A standard user can access an administrator-only endpoint.",Security,Critical,Critical
+Dailoqa QA Platform,BUG-008,Slow dashboard loading,"The dashboard takes approximately 15 seconds to load under normal conditions.",Performance,High,High
+Dailoqa QA Platform,BUG-009,Logout session remains active,"The authentication session remains usable after the user logs out.",Security,High,High
+Dailoqa QA Platform,BUG-010,Missing bug status history,"Changing a bug status does not create the expected audit history record.",Data Integrity,Medium,Medium
