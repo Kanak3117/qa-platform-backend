@@ -1,19 +1,24 @@
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+# These values align with the app's bug form and the supplied QA sample while
+# keeping the previous AI route labels accepted for compatibility.
 Category = Literal[
-    "UI/UX", "API/Backend", "Authentication", "Database", "Performance",
-    "Security", "Integration", "Other",
+    "Payment / Checkout", "Authentication", "Performance", "UI / UX",
+    "API / Backend", "Security", "Functional", "Stability", "API",
+    "Data Integrity", "Database", "Integration", "Other",
+    "UI/UX", "API/Backend",
 ]
-Severity = Literal["Critical", "High", "Medium", "Low"]
-Priority = Literal["P0", "P1", "P2", "P3"]
+Severity = Literal["Critical", "High", "Medium", "Low", "Informational"]
+Priority = Literal["P1", "P2", "P3", "P4"]
 
 
 class BugCandidate(BaseModel):
     id: str = Field(min_length=1, max_length=80)
-    title: str = Field(min_length=1, max_length=200)
+    title: str = Field(min_length=1, max_length=300)
     description: str = Field(min_length=1, max_length=10_000)
 
     @field_validator("id", "title", "description")
@@ -26,9 +31,8 @@ class BugCandidate(BaseModel):
 
 
 class AnalyzeBugRequest(BaseModel):
-    title: str | None = Field(default=None, max_length=200)
+    title: str | None = Field(default=None, max_length=300)
     description: str = Field(min_length=10, max_length=10_000)
-    existing_bugs: list[BugCandidate] = Field(default_factory=list, max_length=500)
 
     @field_validator("title")
     @classmethod
@@ -64,15 +68,24 @@ class AnalyzeBugResponse(BaseModel):
     requires_qa_review: Literal[True] = True
 
 
+class PersistedBugAnalysisResponse(BaseModel):
+    bug_id: UUID
+    analysis_id: UUID
+    analysis: AnalyzeBugResponse
+
+
 class LabeledEvaluationCase(BaseModel):
     case_id: str = Field(min_length=1, max_length=80)
-    title: str | None = Field(default=None, max_length=200)
+    source_bug_code: str | None = Field(default=None, max_length=50)
+    title: str | None = Field(default=None, max_length=300)
     description: str = Field(min_length=10, max_length=10_000)
     expected_category: Category
     expected_severity: Severity
     expected_priority: Priority
     accepted_titles: list[str] = Field(min_length=1, max_length=5)
-    existing_bugs: list[BugCandidate] = Field(default_factory=list, max_length=500)
+    # Set true only when a reviewer has checked every possible duplicate label,
+    # including cases with no duplicates. Otherwise duplicate metrics stay null.
+    duplicate_labels_complete: bool = False
     expected_duplicate_ids: list[str] = Field(default_factory=list, max_length=500)
 
     @field_validator("case_id")
@@ -82,6 +95,14 @@ class LabeledEvaluationCase(BaseModel):
         if not value:
             raise ValueError("case_id must not be blank")
         return value
+
+    @field_validator("source_bug_code")
+    @classmethod
+    def trim_source_bug_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
 
     @field_validator("title")
     @classmethod
@@ -120,17 +141,9 @@ class LabeledEvaluationCase(BaseModel):
         return cleaned
 
     @model_validator(mode="after")
-    def validate_labels_and_candidates(self):
-        expected_priority = {
-            "Critical": "P0", "High": "P1", "Medium": "P2", "Low": "P3"
-        }[self.expected_severity]
-        if self.expected_priority != expected_priority:
-            raise ValueError("expected severity and priority must use the platform mapping")
-        candidate_ids = [candidate.id for candidate in self.existing_bugs]
-        if len(candidate_ids) != len(set(candidate_ids)):
-            raise ValueError("existing_bugs IDs must be unique within a case")
-        if not set(self.expected_duplicate_ids).issubset(candidate_ids):
-            raise ValueError("expected_duplicate_ids must refer to supplied existing_bugs")
+    def validate_duplicate_label_state(self):
+        if self.expected_duplicate_ids and not self.duplicate_labels_complete:
+            raise ValueError("mark duplicate_labels_complete true when supplying reviewed duplicate IDs")
         return self
 
 

@@ -1,68 +1,135 @@
 {
-  "dataset_name": "synthetic-mentor-smoke-v1",
+  "dataset_name": "Dailoqa sample bug labels",
   "cases": [
     {
-      "case_id": "PAY-01",
-      "title": "Checkout payment failure",
-      "description": "Checkout reports failure after charging the card, and no order appears.",
-      "expected_category": "API/Backend",
+      "case_id": "BUG-001",
+      "source_bug_code": "BUG-001",
+      "title": "Login button unresponsive",
+      "description": "Clicking Login with valid credentials produces no response.",
+      "expected_category": "Functional",
       "expected_severity": "High",
-      "expected_priority": "P1",
+      "expected_priority": "P2",
       "accepted_titles": [
-        "Checkout fails after payment",
-        "Payment is charged but checkout fails"
+        "Login button unresponsive"
       ],
-      "existing_bugs": [
-        {
-          "id": "BUG-101",
-          "title": "Card charged but order does not appear",
-          "description": "Payment is captured but checkout creates no order."
-        },
-        {
-          "id": "BUG-102",
-          "title": "Profile avatar upload fails",
-          "description": "Saving a new profile image returns an error."
-        }
-      ],
-      "expected_duplicate_ids": ["BUG-101"]
+      "duplicate_labels_complete": false
     },
     {
-      "case_id": "AUTH-01",
-      "title": "MFA login returns to sign-in",
-      "description": "A valid MFA code is accepted, but the user is redirected back to the sign-in page.",
-      "expected_category": "Authentication",
-      "expected_severity": "High",
-      "expected_priority": "P1",
-      "accepted_titles": [
-        "MFA login returns the user to sign-in"
-      ],
-      "existing_bugs": [
-        {
-          "id": "BUG-201",
-          "title": "Password reset email arrives late",
-          "description": "Password reset email delivery is delayed."
-        }
-      ],
-      "expected_duplicate_ids": []
-    },
-    {
-      "case_id": "UI-01",
-      "title": "Profile save button overlaps helper text",
-      "description": "The profile save button overlaps helper text on a narrow screen, but saving still works.",
-      "expected_category": "UI/UX",
-      "expected_severity": "Low",
+      "case_id": "BUG-002",
+      "source_bug_code": "BUG-002",
+      "title": "Password reset email missing",
+      "description": "The password reset request succeeds but no email is delivered.",
+      "expected_category": "Functional",
+      "expected_severity": "Medium",
       "expected_priority": "P3",
       "accepted_titles": [
-        "Profile save button overlaps helper text"
+        "Password reset email missing"
       ],
-      "existing_bugs": [
-        {
-          "id": "BUG-301",
-          "title": "Search results are slow",
-          "description": "Search takes several seconds to return results."
-        }
+      "duplicate_labels_complete": false
+    },
+    {
+      "case_id": "BUG-003",
+      "source_bug_code": "BUG-003",
+      "title": "Dashboard application crash",
+      "description": "Opening the dashboard causes the application to crash for authenticated users.",
+      "expected_category": "Stability",
+      "expected_severity": "Critical",
+      "expected_priority": "P2",
+      "accepted_titles": [
+        "Dashboard application crash"
       ],
-      "expected_duplicate_ids": []
+      "duplicate_labels_complete": false
+    },
+    {
+      "case_id": "BUG-004",
+      "source_bug_code": "BUG-004",
+      "title": "Mobile profile image distorted",
+      "description": "The profile image appears stretched on smaller mobile screens.",
+      "expected_category": "UI/UX",
+      "expected_severity": "Low",
+      "expected_priority": "P4",
+      "accepted_titles": [
+        "Mobile profile image distorted"
+      ],
+      "duplicate_labels_complete": false
+    },
+    {
+      "case_id": "BUG-005",
+      "source_bug_code": "BUG-005",
+      "title": "Test suite creation returns 500",
+      "description": "Submitting a valid test suite creation request returns HTTP 500.",
+      "expected_category": "API",
+      "expected_severity": "High",
+      "expected_priority": "P2",
+      "accepted_titles": [
+        "Test suite creation returns 500"
+      ],
+      "duplicate_labels_complete": false
+    },
+    {
+      "case_id": "BUG-006",
+      "source_bug_code": "BUG-006",
+      "title": "Duplicate test cases created",
+      "description": "Refreshing after submitting a test case creates a duplicate record.",
+      "expected_category": "Data Integrity",
+      "expected_severity": "Medium",
+      "expected_priority": "P3",
+      "accepted_titles": [
+        "Duplicate test cases created"
+      ],
+      "duplicate_labels_complete": false
+    },
+    {
+      "case_id": "BUG-007",
+      "source_bug_code": "BUG-007",
+      "title": "Unauthorized admin access",
+      "description": "A standard user can access an administrator-only endpoint.",
+      "expected_category": "Security",
+      "expected_severity": "Critical",
+      "expected_priority": "P1",
+      "accepted_titles": [
+        "Unauthorized admin access"
+      ],
+      "duplicate_labels_complete": false
+    },
+    {
+      "case_id": "BUG-008",
+      "source_bug_code": "BUG-008",
+      "title": "Slow dashboard loading",
+      "description": "The dashboard takes approximately 15 seconds to load under normal conditions.",
+      "expected_category": "Performance",
+      "expected_severity": "High",
+      "expected_priority": "P2",
+      "accepted_titles": [
+        "Slow dashboard loading"
+      ],
+      "duplicate_labels_complete": false
+    },
+    {
+      "case_id": "BUG-009",
+      "source_bug_code": "BUG-009",
+      "title": "Logout session remains active",
+      "description": "The authentication session remains usable after the user logs out.",
+      "expected_category": "Security",
+      "expected_severity": "High",
+      "expected_priority": "P2",
+      "accepted_titles": [
+        "Logout session remains active"
+      ],
+      "duplicate_labels_complete": false
+    },
+    {
+      "case_id": "BUG-010",
+      "source_bug_code": "BUG-010",
+      "title": "Missing bug status history",
+      "description": "Changing a bug status does not create the expected audit history record.",
+      "expected_category": "Data Integrity",
+      "expected_severity": "Medium",
+      "expected_priority": "P3",
+      "accepted_titles": [
+        "Missing bug status history"
+      ],
+      "duplicate_labels_complete": false
     }
   ]
 }

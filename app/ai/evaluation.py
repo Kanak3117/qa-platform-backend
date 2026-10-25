@@ -6,18 +6,13 @@ from fastapi import HTTPException, status
 from app.ai.duplicates import find_duplicate_suggestions
 from app.ai.schemas import (
     AnalyzeBugRequest,
-    AnalyzeBugResponse,
+    BugCandidate,
     EvaluateAIRequest,
     EvaluateAIResponse,
     EvaluationCaseResult,
     EvaluationMetrics,
 )
 from app.ai.service import analyze_bug
-
-
-_PRIORITY_FOR_SEVERITY = {
-    "Critical": "P0", "High": "P1", "Medium": "P2", "Low": "P3"
-}
 
 
 def _rate(correct: float, denominator: int) -> float | None:
@@ -30,25 +25,44 @@ def _normalize_title(value: str) -> str:
     return " ".join(value.casefold().split())
 
 
-def evaluate_labeled_dataset(payload: EvaluateAIRequest) -> EvaluateAIResponse:
-    """Call the configured live model and score it against caller-supplied QA labels."""
+def _normalize_category(value: str) -> str:
+    normalized = " ".join(value.casefold().split())
+    normalized = normalized.replace(" / ", "/").replace(" /", "/").replace("/ ", "/")
+    if normalized == "api":
+        return "api/backend"
+    return normalized
+
+
+def evaluate_labeled_dataset(
+    payload: EvaluateAIRequest,
+    candidates_by_case: dict[str, list[BugCandidate]] | None = None,
+) -> EvaluateAIResponse:
+    """Call the configured model and score it against QA-reviewed project labels."""
     if not os.getenv("OPENAI_API_KEY", "").strip():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI evaluation is not configured (OPENAI_API_KEY is missing).",
         )
 
+    candidates_by_case = candidates_by_case or {}
     results: list[EvaluationCaseResult] = []
     duplicate_precision_values: list[float] = []
     duplicate_recall_values: list[float] = []
 
     for case in payload.cases:
+        candidates = candidates_by_case.get(case.case_id, [])
+        candidate_ids = {candidate.id for candidate in candidates}
+        if case.duplicate_labels_complete and not set(case.expected_duplicate_ids).issubset(candidate_ids):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"case {case.case_id}: expected duplicate IDs must exist in this project's bug database",
+            )
+
         try:
-            prediction = analyze_bug(AnalyzeBugRequest(
-                title=case.title,
-                description=case.description,
-                existing_bugs=case.existing_bugs,
-            ))
+            prediction = analyze_bug(
+                AnalyzeBugRequest(title=case.title, description=case.description),
+                candidates,
+            )
             provider_status = "success"
             error_code = None
         except HTTPException as exc:
@@ -60,38 +74,32 @@ def evaluate_labeled_dataset(payload: EvaluateAIRequest) -> EvaluateAIResponse:
 
         if prediction is not None:
             duplicate_suggestions = prediction.duplicates
-            category_correct = prediction.category == case.expected_category
+            category_correct = _normalize_category(prediction.category) == _normalize_category(case.expected_category)
             severity_correct = prediction.severity == case.expected_severity
             priority_correct = prediction.priority == case.expected_priority
-            pair_correct = (
-                severity_correct
-                and priority_correct
-                and prediction.priority == _PRIORITY_FOR_SEVERITY[prediction.severity]
-            )
+            pair_correct = severity_correct and priority_correct
             title_accepted = _normalize_title(prediction.suggested_title) in {
                 _normalize_title(title) for title in case.accepted_titles
             }
         else:
-            # Duplicate matching is local and can still be scored when the LLM provider fails.
+            # Duplicate matching stays available when the provider is unavailable.
             duplicate_suggestions = find_duplicate_suggestions(
-                case.description, case.existing_bugs, title=case.title
+                case.description, candidates, title=case.title
             )
             category_correct = severity_correct = priority_correct = None
             pair_correct = title_accepted = None
 
-        predicted_ids = [item.bug_id for item in duplicate_suggestions[:5]]
-        expected_ids = set(case.expected_duplicate_ids)
-        if case.existing_bugs:
-            hits = len(set(predicted_ids) & expected_ids)
-            precision_at_5 = round(hits / 5, 4)
-            duplicate_precision_values.append(precision_at_5)
-        else:
-            precision_at_5 = None
-        if expected_ids:
-            recall_at_5 = round(len(set(predicted_ids) & expected_ids) / len(expected_ids), 4)
-            duplicate_recall_values.append(recall_at_5)
-        else:
-            recall_at_5 = None
+        precision_at_5 = recall_at_5 = None
+        if case.duplicate_labels_complete:
+            predicted_ids = [item.bug_id for item in duplicate_suggestions[:5]]
+            expected_ids = set(case.expected_duplicate_ids)
+            if candidates:
+                hits = len(set(predicted_ids) & expected_ids)
+                precision_at_5 = round(hits / 5, 4)
+                duplicate_precision_values.append(precision_at_5)
+            if expected_ids:
+                recall_at_5 = round(len(set(predicted_ids) & expected_ids) / len(expected_ids), 4)
+                duplicate_recall_values.append(recall_at_5)
 
         results.append(EvaluationCaseResult(
             case_id=case.case_id,

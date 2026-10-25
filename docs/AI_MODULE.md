@@ -1,71 +1,76 @@
-# AI bug triage and live evaluation
+# AI bug triage and evaluation
 
-## Bug triage workflow
+## What the AI module does
 
-1. A QA engineer submits a report and project ID.
-2. The authenticated API checks project membership.
-3. The backend asks the configured LLM for a title, category, severity, priority, and rationale.
-4. A local TF-IDF cosine matcher compares the report with candidate bugs supplied by the caller and returns up to five possible matches.
-5. The QA engineer reviews the suggestions. AI never creates, changes, closes, or merges a bug.
+The module provides advisory bug triage with `gpt-4.1-mini` by default, validates the provider's structured response, and ranks likely duplicates with local TF-IDF cosine similarity. The model only receives the reported title and description. Candidate bug text is matched locally and is not sent to the provider. AI output never changes a bug's core title, category, severity, priority, or status automatically.
 
-Severity and priority are returned as a consistent pair: Critical/P0, High/P1, Medium/P2, or Low/P3. The model must use only impact supported by the report; uncertain cases should default to Medium/P2 with an explanation.
+The project database already defines `Bug` and `BugAIAnalysis` models. AI routes query the `bugs` table by the authenticated project ID and ignore soft-deleted records. Candidate search is capped at the newest 500 project bugs. `POST /api/projects/{project_id}/ai/bugs/{bug_id}/analyze` also saves the advisory suggestions to the bug's `BugAIAnalysis` row, creating or updating the one-to-one record; it does not overwrite the bug itself.
 
 ## Configuration
 
-Set OPENAI_API_KEY in the local .env file. The default model is gpt-4.1-mini; set OPENAI_MODEL to override it. OPENAI_BASE_URL is optional for an OpenAI-compatible provider. Keep API keys out of source control and restart FastAPI after changing environment settings.
+Set `OPENAI_API_KEY` in `.env`. The default model is `gpt-4.1-mini`; override it with `OPENAI_MODEL`. `OPENAI_BASE_URL` is optional for an OpenAI-compatible provider. Keep provider keys out of source control and restart FastAPI after changing environment values.
 
-## Triage API
+## API routes
 
-POST /api/projects/{project_id}/ai/analyze requires a Bearer token and membership in that project. Example body:
+### Analyze a new report against this project's bug database
 
-    {
-      "title": "Checkout payment failure",
-      "description": "The card is charged but checkout reports that the transaction failed.",
-      "existing_bugs": [
-        {
-          "id": "BUG-12",
-          "title": "Charge succeeds but checkout fails",
-          "description": "Card is charged and no order is created."
-        }
-      ]
-    }
+`POST /api/projects/{project_id}/ai/analyze` requires an authenticated project member. The API loads candidates from the current project; it does not accept candidate bugs from the caller.
 
-The response contains suggestions, duplicate IDs/titles and similarity scores, duplicate_method, and requires_qa_review=true. Existing candidates are optional (maximum 500). The endpoint returns 503 when the API key is missing, 502 for provider/network/format failures, and normal FastAPI 422 responses for invalid input.
+```json
+{
+  "title": "Checkout payment failure",
+  "description": "The card is charged but checkout reports that the transaction failed."
+}
+```
 
-## Live labeled evaluation API
+The response contains a suggested title, category, severity, priority, rationale, and up to five duplicate suggestions with similarity scores. It sets `requires_qa_review: true`.
 
-POST /api/projects/{project_id}/ai/evaluate runs the configured live model against a small QA-labeled dataset. It requires a project QA_ENGINEER or system ADMIN token. Each request is capped at 10 cases to bound cost and runtime. The endpoint calls the live provider once per case and returns per-case predictions, provider error codes, and aggregate metrics. Evaluation runs are not persisted; save the response as test evidence if needed. Provider errors are counted; the local duplicate matcher can still be scored if a provider call fails.
+### Save AI suggestions for an existing bug
 
-The repository currently has no Bug model, bug list endpoint, or persisted bug database. existing_bugs in each evaluation case is therefore a supplied test fixture, not a database query. The included docs/ai_evaluation_sample.json is a tiny synthetic mock dataset for wiring and smoke checks. It is not representative enough to claim model accuracy. When bug management is integrated, candidate bugs must be loaded server-side and filtered by project ID and authenticated user.
+`POST /api/projects/{project_id}/ai/bugs/{bug_id}/analyze` requires an authenticated member of the project. The bug is looked up by both `bug_id` and `project_id`; deleted or cross-project bugs return 404. The endpoint excludes the source bug from duplicate candidates, then upserts the result into `bug_ai_analyses`. It does not mutate the bug record.
 
-The request requires expected_category, expected_severity, expected_priority, one or more QA-approved accepted_titles, and expected_duplicate_ids. Expected severity and priority must follow the same mapping as the prompt. Expected duplicate IDs must exist in that case's candidate list. Approved titles are compared case-insensitively after whitespace normalization; punctuation and wording otherwise need to match an approved title.
+### Evaluate live model output
 
-Example call after loading the sample JSON and setting a QA bearer token:
+`POST /api/projects/{project_id}/ai/evaluate` requires the project `QA_ENGINEER` role or system `ADMIN`. Submit 1–10 human-labeled cases. The endpoint uses only non-deleted bug candidates from the authenticated project and excludes each case's `source_bug_code` from its own candidate list. It returns per-case results and denominators for provider success, category accuracy, severity accuracy, priority accuracy, exact severity/priority pair accuracy, title acceptance, and duplicate precision@5/recall@5. Evaluation responses are not persisted.
 
-    curl -X POST "http://127.0.0.1:8000/api/projects/PROJECT_UUID/ai/evaluate" \
-      -H "Authorization: Bearer $QA_TOKEN" \
-      -H "Content-Type: application/json" \
-      --data-binary @docs/ai_evaluation_sample.json
+Set `duplicate_labels_complete` to `true` only after a QA reviewer has labeled both positive and negative duplicate cases. When duplicate labels are incomplete, duplicate metrics are returned as `null`; the API will not report an invented zero score. `expected_duplicate_ids` must identify existing bug codes in the same project.
 
-The response includes the ranked duplicate suggestions for every case, even if its LLM call failed. Rates are returned as fractions from 0.0 to 1.0; multiply by 100 to display percentages. The response reports:
-- provider success rate and denominator;
-- category, severity, priority, and combined severity/priority exact match;
-- title acceptance against the approved alternatives;
-- duplicate precision@5 (relevant candidates in the first five divided by five, averaged over cases with candidates);
-- duplicate recall@5 (expected relevant IDs found in the first five, averaged over cases with at least one expected duplicate).
+Use `docs/ai_evaluation_sample.json` as an initial request body after the sample records are seeded. Its 10 cases come from the supplied sample file. The UI defines P1 (immediate), P2 (high), P3 (medium), and P4 (low), so the request fixture maps source priority words `Critical`, `High`, `Medium`, and `Low` to `P1`, `P2`, `P3`, and `P4`. Severity and priority are scored independently; there is no forced one-to-one mapping. The supplied records have no reviewed duplicate relationships, so duplicate metrics remain null.
 
-Cases with no candidate bugs are excluded from duplicate precision; cases with no expected duplicate are excluded from duplicate recall. The API returns denominators so rates are not shown without sample size. These metrics describe only the submitted labeled sample. They do not establish general accuracy. Define minimum sample size and acceptance thresholds with the mentor before presenting results.
+Example request after obtaining a project QA token:
 
-## Testing
+```sh
+curl -X POST "http://127.0.0.1:8000/api/projects/PROJECT_UUID/ai/evaluate" \
+  -H "Authorization: Bearer QA_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data-binary @docs/ai_evaluation_sample.json
+```
 
-Run offline regression tests:
+### Seed the sample bug records into a test project
 
-    python -m unittest discover -s tests -v
+The repository has the database model and migration, but does not yet include bug CRUD routes. For local/demo evaluation only, `scripts/seed_ai_eval_bugs.py` imports the sample CSV directly into a specified project and reporter. Apply database migrations first, then run:
 
-The suite mocks provider responses and covers response validation, missing configuration, provider failures, title normalization, severity/priority consistency, duplicate matching, and evaluation metric aggregation. GitHub Actions runs this suite on pull requests and pushes to main.
+```sh
+python scripts/seed_ai_eval_bugs.py --project-id PROJECT_UUID --reporter-id ACTIVE_USER_UUID --dry-run
+python scripts/seed_ai_eval_bugs.py --project-id PROJECT_UUID --reporter-id ACTIVE_USER_UUID
+```
 
-For live verification, configure the key and database, start FastAPI, create a project, and add a QA_ENGINEER member. Open /docs, authorize with that member's token, submit the example evaluation request, and inspect every per-case result and denominator. Do not put a real API key or bearer token in screenshots or reports.
+The importer maps the supplied priority words to P1–P4, skips bug codes already present in the same project, and refuses a bug code owned by another project. Use a disposable development/test project; this sample is for smoke checks, not production data. The seed records are not a representative accuracy benchmark.
+
+## Testing and evaluation protocol
+
+Run the offline test suite with:
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+Tests mock provider responses and cover structured response validation, provider errors, project-scoped candidate loading, persistence of advisory analysis, duplicate ranking, and evaluation metrics. CI runs the suite on pull requests.
+
+For a live check, configure the provider key, migrate the database, seed a test project, and use a QA Engineer token. Check successful analysis, empty candidate handling, invalid input (422), unauthenticated access (401), non-member access (403), missing configuration (503), and provider failures (502). Do not include keys or bearer tokens in logs or screenshots.
+
+For a meaningful accuracy report, use QA-reviewed held-out cases, freeze model/prompt versions for the run, review every mismatch, and report sample size with the metrics. The ten supplied rows are only an initial smoke dataset. They have no duplicate ground truth, so they cannot measure duplicate precision or recall. The supplied titles are treated as accepted title labels in the sample request; have QA confirm them before publishing title acceptance results.
 
 ## Limitations
 
-LLM suggestions can be wrong, overstate impact, or vary across reports. TF-IDF is lexical: it can miss paraphrases and may mistake keyword overlap for a match. Results depend on report quality, candidate coverage, provider availability, and API usage. New bug title and description are sent to the configured AI provider; candidate bug texts are compared locally. Keep human review in the workflow and never automate bug closure or merging based only on this response.
+LLM output can be wrong or inconsistent. TF-IDF is lexical and can miss paraphrases or over-rank keyword overlap. Duplicate quality depends on project candidate coverage and reviewed labels. The bug report title and description are sent to the configured provider. Keep a human reviewer in the loop and do not auto-close or merge bugs based on AI output.
