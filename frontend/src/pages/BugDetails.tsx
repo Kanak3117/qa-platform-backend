@@ -13,11 +13,13 @@ import {
   User as UserIcon,
   Calendar,
   Layers,
-  Check
+  Check,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { SeverityBadge } from '../components/common/SeverityBadge';
+import { PriorityBadge } from '../components/common/PriorityBadge';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -46,6 +48,8 @@ export const BugDetails: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isRevertingStatus, setIsRevertingStatus] = useState(false);
+  const [statusFeedback, setStatusFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [aiApplied, setAiApplied] = useState(false);
 
   useEffect(() => {
@@ -86,13 +90,48 @@ export const BugDetails: React.FC = () => {
   const handleStatusChange = async (nextStatus: BugStatus) => {
     if (!bug) return;
     setIsUpdatingStatus(true);
+    setStatusFeedback(null);
     try {
       const updated = await api.updateBugStatus(bug.id, nextStatus, user?.id || 'usr-101');
       setBug(updated);
       const hists = await api.getBugStatusHistories(bug.id);
       setHistories(hists);
+      setStatusFeedback({
+        type: 'success',
+        message: `Status updated to ${updated.status}. Relevant team members have been notified.`
+      });
+      setTimeout(() => setStatusFeedback(null), 4000);
+    } catch (err: any) {
+      setStatusFeedback({
+        type: 'error',
+        message: err?.message || 'Failed to update status. Please try again.'
+      });
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleRevertStatus = async () => {
+    if (!bug || histories.length === 0) return;
+    setIsRevertingStatus(true);
+    setStatusFeedback(null);
+    try {
+      const updated = await api.revertBugStatus(bug.id, user?.id || 'usr-101');
+      setBug(updated);
+      const hists = await api.getBugStatusHistories(bug.id);
+      setHistories(hists);
+      setStatusFeedback({
+        type: 'success',
+        message: `Status successfully reverted back to ${updated.status}.`
+      });
+      setTimeout(() => setStatusFeedback(null), 4000);
+    } catch (err: any) {
+      setStatusFeedback({
+        type: 'error',
+        message: err?.response?.data?.detail || err?.message || 'Failed to revert status.'
+      });
+    } finally {
+      setIsRevertingStatus(false);
     }
   };
 
@@ -154,7 +193,7 @@ export const BugDetails: React.FC = () => {
         </button>
 
         {/* Status Lifecycle Action Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <span className="text-xs text-secondary mr-1">Status:</span>
           <StatusBadge status={bug.status} size="md" />
 
@@ -163,6 +202,7 @@ export const BugDetails: React.FC = () => {
               size="sm"
               variant="outline"
               isLoading={isUpdatingStatus}
+              disabled={isRevertingStatus}
               onClick={() => handleStatusChange('In Progress')}
             >
               Start Progress →
@@ -173,6 +213,7 @@ export const BugDetails: React.FC = () => {
             <Button
               size="sm"
               isLoading={isUpdatingStatus}
+              disabled={isRevertingStatus}
               onClick={() => handleStatusChange('Fixed')}
             >
               <CheckCircle2 size={14} /> Mark as Fixed
@@ -184,6 +225,7 @@ export const BugDetails: React.FC = () => {
               size="sm"
               variant="outline"
               isLoading={isUpdatingStatus}
+              disabled={isRevertingStatus}
               onClick={() => handleStatusChange('Retest')}
             >
               Send to Retest →
@@ -195,8 +237,9 @@ export const BugDetails: React.FC = () => {
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-600 hover:bg-red-50 border-red-200"
+                className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border-red-200 dark:border-red-900/60"
                 isLoading={isUpdatingStatus}
+                disabled={isRevertingStatus}
                 onClick={() => handleStatusChange('Reopened')}
               >
                 Reopen Defect
@@ -204,6 +247,7 @@ export const BugDetails: React.FC = () => {
               <Button
                 size="sm"
                 isLoading={isUpdatingStatus}
+                disabled={isRevertingStatus}
                 onClick={() => handleStatusChange('Closed')}
               >
                 <CheckCircle2 size={14} /> Verify & Close
@@ -215,7 +259,9 @@ export const BugDetails: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
+              className="text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 border-amber-200 dark:border-amber-900/60"
               isLoading={isUpdatingStatus}
+              disabled={isRevertingStatus}
               onClick={() => handleStatusChange('Reopened')}
             >
               Reopen Bug
@@ -226,13 +272,56 @@ export const BugDetails: React.FC = () => {
             <Button
               size="sm"
               isLoading={isUpdatingStatus}
+              disabled={isRevertingStatus}
               onClick={() => handleStatusChange('In Progress')}
             >
               Move to In Progress
             </Button>
           )}
+
+          {/* Rollback Status Action */}
+          {histories.length > 0 && histories[0]?.old_status && histories[0].old_status !== bug.status && (
+            <Button
+              size="sm"
+              variant="outline"
+              isLoading={isRevertingStatus}
+              disabled={isUpdatingStatus}
+              onClick={handleRevertStatus}
+              title={`Roll back status to ${histories[0].old_status}`}
+              className="border-border text-secondary hover:text-navy-900 bg-surface hover:bg-soft"
+            >
+              <RotateCcw size={13} className="text-secondary" />
+              Revert to {histories[0].old_status}
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Status Feedback Banner */}
+      {statusFeedback && (
+        <div
+          className={`p-3 rounded-lg border text-xs flex items-center justify-between transition-all ${
+            statusFeedback.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-200'
+              : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-800 dark:text-red-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {statusFeedback.type === 'success' ? (
+              <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle size={15} className="text-red-600 dark:text-red-400 shrink-0" />
+            )}
+            <span>{statusFeedback.message}</span>
+          </div>
+          <button
+            onClick={() => setStatusFeedback(null)}
+            className="text-secondary hover:text-navy-900 text-xs px-1 font-semibold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Main Bug Header Card */}
       <div className="bg-surface rounded-card border border-border p-6 shadow-xs">
@@ -241,9 +330,7 @@ export const BugDetails: React.FC = () => {
             {bug.bug_code}
           </span>
           <SeverityBadge severity={bug.severity} size="sm" />
-          <span className="text-xs font-semibold text-navy-800 bg-gray-100 px-2 py-0.5 rounded">
-            {bug.priority}
-          </span>
+          <PriorityBadge priority={bug.priority} size="sm" />
           <span className="text-xs text-secondary bg-soft border border-border px-2 py-0.5 rounded">
             {bug.category}
           </span>
@@ -327,9 +414,14 @@ export const BugDetails: React.FC = () => {
                     <Sparkles size={16} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-navy-900">AI Bug Intelligence</h3>
-                    <p className="text-[11px] text-secondary">
-                      Automated classification & duplicate detection
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-navy-900">AI Bug Intelligence</h3>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border badge-ai-preview">
+                        AI Preview — Demo Data
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-secondary mt-0.5">
+                      Illustrative recommendations. Live AI analysis is not yet connected.
                     </p>
                   </div>
                 </div>
@@ -374,8 +466,8 @@ export const BugDetails: React.FC = () => {
                 </div>
 
                 {aiAnalysis.duplicate_bug_ids.length > 0 && (
-                  <div className="p-3 rounded-lg bg-amber-50/60 border border-amber-200">
-                    <div className="flex items-center gap-1.5 text-amber-800 font-semibold mb-1">
+                  <div className="p-3 rounded-lg bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
+                    <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300 font-semibold mb-1">
                       <AlertCircle size={14} /> Potential Duplicate Match
                     </div>
                     <div className="text-secondary text-[11px]">
@@ -430,7 +522,7 @@ export const BugDetails: React.FC = () => {
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Write a comment or QA triage update..."
-                className="w-full text-xs p-3 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary mb-2"
+                className="w-full text-xs p-3 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary mb-2"
               />
               <div className="flex justify-end">
                 <Button size="sm" type="submit" isLoading={isSubmittingComment} disabled={!newComment.trim()}>
@@ -462,7 +554,7 @@ export const BugDetails: React.FC = () => {
                 attachments.map((att) => (
                   <div
                     key={att.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg bg-soft border border-border hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-soft border border-border hover:bg-surface transition-colors"
                   >
                     <div className="flex items-center gap-2 truncate">
                       <Paperclip size={14} className="text-secondary shrink-0" />
@@ -484,10 +576,10 @@ export const BugDetails: React.FC = () => {
               <h3 className="text-sm font-semibold text-navy-900">Status History Timeline</h3>
             </div>
 
-            <div className="relative mt-4 pl-4 border-l-2 border-gray-200 space-y-4 text-xs">
+            <div className="relative mt-4 pl-4 border-l-2 border-border space-y-4 text-xs">
               {histories.map((hist) => (
                 <div key={hist.id} className="relative">
-                  <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white ring-1 ring-primary"></div>
+                  <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-surface ring-1 ring-primary"></div>
                   <div className="font-medium text-navy-900">
                     <span className="text-secondary">{hist.old_status}</span>
                     <span className="mx-1 text-muted">→</span>

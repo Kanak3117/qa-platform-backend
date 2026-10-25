@@ -65,9 +65,9 @@ class ApiService {
   private companyProfile: CompanyProfile = { ...MOCK_COMPANY_PROFILE };
 
   constructor() {
-    this.token = localStorage.getItem('dailoqa_token');
-    this.currentUserId = localStorage.getItem('dailoqa_user_id');
-    const savedProfile = localStorage.getItem('dailoqa_company_profile');
+    this.token = localStorage.getItem('devvalidate_token') || localStorage.getItem('dailoqa_token');
+    this.currentUserId = localStorage.getItem('devvalidate_user_id') || localStorage.getItem('dailoqa_user_id');
+    const savedProfile = localStorage.getItem('devvalidate_company_profile') || localStorage.getItem('dailoqa_company_profile');
     if (savedProfile) {
       try {
         this.companyProfile = JSON.parse(savedProfile);
@@ -97,9 +97,11 @@ class ApiService {
     this.token = token;
     this.currentUserId = userId;
     if (token) {
-      localStorage.setItem('dailoqa_token', token);
-      if (userId) localStorage.setItem('dailoqa_user_id', userId);
+      localStorage.setItem('devvalidate_token', token);
+      if (userId) localStorage.setItem('devvalidate_user_id', userId);
     } else {
+      localStorage.removeItem('devvalidate_token');
+      localStorage.removeItem('devvalidate_user_id');
       localStorage.removeItem('dailoqa_token');
       localStorage.removeItem('dailoqa_user_id');
     }
@@ -160,6 +162,10 @@ class ApiService {
 
       if (meRes.ok) {
         const user: User = await meRes.json();
+        if (!user.project_role) {
+          const matched = this.users.find((u) => u.email.toLowerCase() === user.email.toLowerCase());
+          if (matched?.project_role) user.project_role = matched.project_role;
+        }
         this.setToken(accessToken, user.id);
         return { token: accessToken, user };
       }
@@ -244,6 +250,10 @@ class ApiService {
       });
       if (res.ok) {
         const liveUser = await res.json();
+        if (!liveUser.project_role) {
+          const matched = this.users.find((u) => u.email.toLowerCase() === liveUser.email.toLowerCase());
+          if (matched?.project_role) liveUser.project_role = matched.project_role;
+        }
         this.currentUserId = liveUser.id;
         return liveUser;
       }
@@ -413,6 +423,14 @@ class ApiService {
       'ProjectMember',
       `Assigned user ${user?.email || userId} as ${projectRole} on project ${projectId}`
     );
+    const actor = this.users.find((u) => u.id === (this.currentUserId || 'usr-103'));
+    const actorName = actor?.name || 'Administrator';
+    this.dispatchRoleNotification(
+      projectId,
+      this.currentUserId || 'usr-103',
+      `${actorName} added ${user?.name || userId} as ${projectRole} to the project`,
+      [userId]
+    );
     this.notify();
     return newMember;
   }
@@ -455,8 +473,17 @@ class ApiService {
     } catch {
       // offline
     }
+    const removed = this.projectMembers.find((m) => m.id === memberId);
     this.projectMembers = this.projectMembers.filter((m) => m.id !== memberId);
     this.logAuditEvent('REMOVE_PROJECT_MEMBER', 'ProjectMember', `Removed member ${memberId} from project`);
+    const actor = this.users.find((u) => u.id === (this.currentUserId || 'usr-103'));
+    const actorName = actor?.name || 'Administrator';
+    this.dispatchRoleNotification(
+      projectId,
+      this.currentUserId || 'usr-103',
+      `${actorName} removed a contributor from the project`,
+      removed ? [removed.user_id] : []
+    );
     this.notify();
   }
 
@@ -551,11 +578,16 @@ class ApiService {
   }
 
   // TEST CASES
-  async getTestCases(suiteId?: string): Promise<TestCase[]> {
-    if (suiteId) {
-      return this.testCases.filter((tc) => tc.test_suite_id === suiteId && !tc.is_deleted);
+  async getTestCases(suiteId?: string, projectId?: string): Promise<TestCase[]> {
+    let list = this.testCases.filter((tc) => !tc.is_deleted);
+    if (suiteId && suiteId !== 'ALL') {
+      list = list.filter((tc) => tc.test_suite_id === suiteId);
     }
-    return this.testCases.filter((tc) => !tc.is_deleted);
+    if (projectId) {
+      const suiteIds = new Set(this.suites.filter((s) => s.project_id === projectId).map((s) => s.id));
+      list = list.filter((tc) => suiteIds.has(tc.test_suite_id));
+    }
+    return list;
   }
 
   async getTestCaseById(id: string): Promise<TestCase | undefined> {
@@ -596,11 +628,16 @@ class ApiService {
   }
 
   // TEST EXECUTIONS
-  async getExecutions(runId?: string): Promise<TestExecution[]> {
+  async getExecutions(runId?: string, projectId?: string): Promise<TestExecution[]> {
+    let list = this.executions;
     if (runId) {
-      return this.executions.filter((e) => e.test_run_id === runId);
+      list = list.filter((e) => e.test_run_id === runId);
     }
-    return this.executions;
+    if (projectId) {
+      const runIds = new Set(this.testRuns.filter((tr) => tr.project_id === projectId).map((tr) => tr.id));
+      list = list.filter((e) => runIds.has(e.test_run_id));
+    }
+    return list;
   }
 
   async executeTestCase(
@@ -623,6 +660,21 @@ class ApiService {
       'TestExecution',
       `Executed test case ${testCaseId} in run ${runId} with result ${result}`
     );
+
+    const run = this.testRuns.find((r) => r.id === runId);
+    const runName = run?.name || 'Test Run';
+    const executor = this.users.find((u) => u.id === userId);
+    const executorName = executor?.name || 'QA Tester';
+
+    if (result === 'Failed' || result === 'Blocked') {
+      this.dispatchRoleNotification(
+        run?.project_id || 'prj-001',
+        userId,
+        `${executorName} recorded a ${result} test execution in "${runName}" for case ${testCaseId}`,
+        []
+      );
+    }
+
     this.notify();
     return execution;
   }
@@ -662,11 +714,38 @@ class ApiService {
     });
 
     this.logAuditEvent('CREATE_DEFECT', 'Bug', `Created defect ${newBug.bug_code}: "${newBug.title}"`);
+
+    const reporter = this.users.find((u) => u.id === data.reporter_id);
+    const reporterName = reporter?.name || 'QA Tester';
+    this.dispatchRoleNotification(
+      data.project_id,
+      data.reporter_id,
+      `${reporterName} reported new ${data.severity} bug ${newBug.bug_code}: "${newBug.title}"`,
+      [data.assignee_id || ''].filter(Boolean)
+    );
+
     this.notify();
     return newBug;
   }
 
   async updateBugStatus(bugId: string, newStatus: BugStatus, changedBy: string): Promise<Bug> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/bugs/${bugId}/status`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        const liveBug = await res.json();
+        const idx = this.bugs.findIndex((b) => b.id === bugId);
+        if (idx !== -1) this.bugs[idx] = { ...this.bugs[idx], ...liveBug };
+        this.notify();
+        return liveBug;
+      }
+    } catch {
+      // offline
+    }
+
     const bug = this.bugs.find((b) => b.id === bugId);
     if (!bug) throw new Error('Bug not found');
     const oldStatus = bug.status;
@@ -682,7 +761,107 @@ class ApiService {
       changed_at: new Date().toISOString(),
     });
 
+    const actor = this.users.find((u) => u.id === changedBy);
+    const actorName = actor?.name || 'A team member';
+
     this.logAuditEvent('STATUS_TRANSITION', 'Bug', `Updated ${bug.bug_code} status: ${oldStatus} → ${newStatus}`);
+
+    this.dispatchRoleNotification(
+      bug.project_id,
+      changedBy,
+      `${actorName} moved bug ${bug.bug_code} to ${newStatus}`,
+      [bug.assignee_id || '', bug.reporter_id || ''].filter(Boolean)
+    );
+
+    this.notify();
+    return { ...bug };
+  }
+
+  async revertBugStatus(bugId: string, changedBy: string): Promise<Bug> {
+    // 1. Try backend endpoint first
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/bugs/${bugId}/revert-status`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
+      if (res.ok) {
+        const liveBug = await res.json();
+        const idx = this.bugs.findIndex((b) => b.id === bugId);
+        if (idx !== -1) {
+          this.bugs[idx] = { ...this.bugs[idx], ...liveBug };
+        }
+        // Also fetch updated history
+        const histRes = await fetch(`${API_BASE_URL}/api/bugs/${bugId}/history`, {
+          headers: this.getHeaders(),
+        });
+        if (histRes.ok) {
+          const liveHistories = await histRes.json();
+          this.statusHistories = [
+            ...liveHistories,
+            ...this.statusHistories.filter((h) => h.bug_id !== bugId),
+          ];
+        }
+        this.notify();
+        return liveBug;
+      }
+    } catch {
+      // offline fallback
+    }
+
+    // 2. In-memory rollback logic
+    const bug = this.bugs.find((b) => b.id === bugId);
+    if (!bug) throw new Error('Bug not found');
+
+    const bugHistories = this.statusHistories.filter((h) => h.bug_id === bugId);
+    if (bugHistories.length === 0) {
+      throw new Error('No status history available to revert');
+    }
+
+    let targetStatus: BugStatus | null = null;
+    for (const h of bugHistories) {
+      if (h.old_status && h.old_status !== bug.status && h.old_status !== 'None') {
+        targetStatus = h.old_status as BugStatus;
+        break;
+      } else if (h.new_status !== bug.status) {
+        targetStatus = h.new_status as BugStatus;
+        break;
+      }
+    }
+
+    if (!targetStatus) {
+      throw new Error('No preceding status available to revert to');
+    }
+
+    const currentStatus = bug.status;
+    bug.status = targetStatus;
+    bug.updated_at = new Date().toISOString();
+
+    const rollbackHistory: BugStatusHistory = {
+      id: `hist-${Date.now()}`,
+      bug_id: bug.id,
+      changed_by: changedBy,
+      old_status: currentStatus,
+      new_status: targetStatus,
+      changed_at: new Date().toISOString(),
+    };
+    this.statusHistories.unshift(rollbackHistory);
+
+    const actor = this.users.find((u) => u.id === changedBy);
+    const actorName = actor?.name || 'A team member';
+
+    this.logAuditEvent(
+      'STATUS_REVERT',
+      'Bug',
+      `Reverted ${bug.bug_code} status from ${currentStatus} back to ${targetStatus}`
+    );
+
+    this.dispatchRoleNotification(
+      bug.project_id,
+      changedBy,
+      `${actorName} reverted bug ${bug.bug_code} from ${currentStatus} back to ${targetStatus}`,
+      [bug.assignee_id || '', bug.reporter_id || ''].filter(Boolean)
+    );
+
     this.notify();
     return { ...bug };
   }
@@ -690,12 +869,27 @@ class ApiService {
   async updateBug(bugId: string, updates: Partial<Bug>): Promise<Bug> {
     const bugIndex = this.bugs.findIndex((b) => b.id === bugId);
     if (bugIndex === -1) throw new Error('Bug not found');
+    const oldAssignee = this.bugs[bugIndex].assignee_id;
     this.bugs[bugIndex] = {
       ...this.bugs[bugIndex],
       ...updates,
       updated_at: new Date().toISOString(),
     };
     this.logAuditEvent('UPDATE_DEFECT', 'Bug', `Modified details on ${this.bugs[bugIndex].bug_code}`);
+
+    // If reassigned or priority changed, dispatch notification
+    if (updates.assignee_id && updates.assignee_id !== oldAssignee) {
+      const assigneeUser = this.users.find((u) => u.id === updates.assignee_id);
+      const actor = this.users.find((u) => u.id === this.currentUserId);
+      const actorName = actor?.name || 'A team member';
+      this.dispatchRoleNotification(
+        this.bugs[bugIndex].project_id,
+        this.currentUserId || 'usr-103',
+        `${actorName} assigned bug ${this.bugs[bugIndex].bug_code} to ${assigneeUser?.name || 'you'}`,
+        [updates.assignee_id]
+      );
+    }
+
     this.notify();
     return { ...this.bugs[bugIndex] };
   }
@@ -725,6 +919,19 @@ class ApiService {
     };
     this.comments.push(newComm);
     this.logAuditEvent('ADD_COMMENT', 'Comment', `Added triage comment to bug ${bugId}`);
+
+    const bug = this.bugs.find((b) => b.id === bugId);
+    const author = this.users.find((u) => u.id === authorId);
+    const authorName = author?.name || 'A team member';
+    if (bug) {
+      this.dispatchRoleNotification(
+        bug.project_id,
+        authorId,
+        `${authorName} commented on ${bug.bug_code}: "${comment.length > 50 ? comment.slice(0, 47) + '...' : comment}"`,
+        [bug.assignee_id || '', bug.reporter_id || ''].filter(Boolean)
+      );
+    }
+
     this.notify();
     return newComm;
   }
@@ -749,20 +956,256 @@ class ApiService {
     return newAtt;
   }
 
-  // NOTIFICATIONS
+  // ROLE-BASED NOTIFICATION ROUTER (Section 6.A & 6.B)
+  public dispatchRoleNotification(
+    projectId: string,
+    actorId: string,
+    message: string,
+    specificUserIds: string[] = []
+  ): void {
+    const actor = this.users.find((u) => u.id === actorId);
+    const actorRole = actor?.system_role;
+
+    const actorMember = this.projectMembers.find(
+      (pm) => pm.project_id === projectId && pm.user_id === actorId
+    );
+    const projectRole = actorMember?.project_role || actor?.project_role;
+
+    const recipientIds = new Set<string>();
+
+    // Developer action -> Notify QA Engineers and Admins
+    if (projectRole === 'DEVELOPER') {
+      this.projectMembers
+        .filter((pm) => pm.project_id === projectId && pm.project_role === 'QA_ENGINEER')
+        .forEach((pm) => recipientIds.add(pm.user_id));
+      this.users
+        .filter((u) => u.system_role === 'ADMIN')
+        .forEach((u) => recipientIds.add(u.id));
+    }
+    // QA Engineer action -> Notify Developers and Admins
+    else if (projectRole === 'QA_ENGINEER') {
+      this.projectMembers
+        .filter((pm) => pm.project_id === projectId && pm.project_role === 'DEVELOPER')
+        .forEach((pm) => recipientIds.add(pm.user_id));
+      this.users
+        .filter((u) => u.system_role === 'ADMIN')
+        .forEach((u) => recipientIds.add(u.id));
+    }
+    // Admin action -> Notify Developers and QA Engineers
+    else if (actorRole === 'ADMIN') {
+      this.projectMembers
+        .filter(
+          (pm) =>
+            pm.project_id === projectId &&
+            (pm.project_role === 'DEVELOPER' || pm.project_role === 'QA_ENGINEER')
+        )
+        .forEach((pm) => recipientIds.add(pm.user_id));
+    }
+    // Default fallback
+    else {
+      this.projectMembers
+        .filter((pm) => pm.project_id === projectId)
+        .forEach((pm) => recipientIds.add(pm.user_id));
+    }
+
+    // Add specifically targeted users (e.g. bug assignee, bug reporter)
+    specificUserIds.forEach((uid) => {
+      if (uid) recipientIds.add(uid);
+    });
+
+    // Never notify the actor
+    recipientIds.delete(actorId);
+
+    // Create notifications for each recipient with real database-compatible timestamps
+    const nowIso = new Date().toISOString();
+    recipientIds.forEach((uid) => {
+      const notif: Notification = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        user_id: uid,
+        message,
+        is_read: false,
+        created_at: nowIso,
+      };
+      this.notifications.unshift(notif);
+    });
+
+    this.notify();
+  }
+
+  // NOTIFICATIONS (Section 6.D & 6.E)
   async getNotifications(userId?: string): Promise<Notification[]> {
-    if (userId) {
-      return this.notifications.filter((n) => n.user_id === userId);
+    const targetUserId = userId || this.currentUserId;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/notifications/`, {
+        headers: this.getHeaders(),
+      });
+      if (res.ok) {
+        const live = await res.json();
+        if (Array.isArray(live)) {
+          return live;
+        }
+      }
+    } catch {
+      // offline fallback
+    }
+
+    if (targetUserId) {
+      return this.notifications.filter((n) => n.user_id === targetUserId);
     }
     return this.notifications;
   }
 
   async markNotificationRead(id: string): Promise<void> {
+    try {
+      await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+      });
+    } catch {
+      // offline fallback
+    }
     const notif = this.notifications.find((n) => n.id === id);
     if (notif) {
       notif.is_read = true;
       this.notify();
     }
+  }
+
+  async markAllNotificationsRead(userId?: string): Promise<void> {
+    try {
+      await fetch(`${API_BASE_URL}/api/notifications/mark-all-read`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
+    } catch {
+      // offline fallback
+    }
+    const targetUserId = userId || this.currentUserId;
+    this.notifications.forEach((n) => {
+      if (!targetUserId || n.user_id === targetUserId) {
+        n.is_read = true;
+      }
+    });
+    this.notify();
+  }
+
+  // USER SELF PROFILE MANAGEMENT
+  async updateProfile(data: {
+    name?: string;
+    email?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }): Promise<User> {
+    try {
+      const payload: Record<string, string> = {};
+      if (data.name) payload.name = data.name.trim();
+      if (data.email) payload.email = data.email.trim().toLowerCase();
+      if (data.currentPassword) payload.current_password = data.currentPassword;
+      if (data.newPassword) payload.new_password = data.newPassword;
+
+      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const updated: User = await res.json();
+        const idx = this.users.findIndex((u) => u.id === updated.id);
+        if (idx !== -1) {
+          this.users[idx] = { ...this.users[idx], ...updated };
+        }
+        this.logAuditEvent('UPDATE_PROFILE', 'User', `User updated own profile: ${updated.email}`);
+        this.notify();
+        return updated;
+      } else {
+        const err = await res.json().catch(() => ({ detail: 'Failed to update profile' }));
+        throw new Error(err.detail || 'Failed to update profile');
+      }
+    } catch (err: any) {
+      if (err.message && !err.message.includes('Failed to fetch')) {
+        throw err;
+      }
+
+      // Offline / Demo Fallback
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser) throw new Error('Not authenticated');
+
+      if (data.email && data.email.toLowerCase() !== currentUser.email.toLowerCase()) {
+        const emailExists = this.users.some(
+          (u) => u.id !== currentUser.id && u.email.toLowerCase() === data.email!.toLowerCase().trim()
+        );
+        if (emailExists) throw new Error('Email already registered');
+      }
+
+      if (data.newPassword) {
+        if (!data.currentPassword) {
+          throw new Error('Current password is required to set a new password');
+        }
+        if (data.currentPassword !== 'password' && data.currentPassword.length < 4) {
+          throw new Error('Current password is incorrect');
+        }
+      }
+
+      const updatedUser: User = {
+        ...currentUser,
+        name: data.name ? data.name.trim() : currentUser.name,
+        email: data.email ? data.email.trim().toLowerCase() : currentUser.email,
+      };
+
+      const idx = this.users.findIndex((u) => u.id === currentUser.id);
+      if (idx !== -1) {
+        this.users[idx] = updatedUser;
+      }
+      this.logAuditEvent('UPDATE_PROFILE', 'User', `User updated profile in demo session: ${updatedUser.email}`);
+      this.notify();
+      return updatedUser;
+    }
+  }
+
+  // GLOBAL PROJECT SEARCH
+  async searchProjectEntities(query: string, projectId?: string) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      return { bugs: [], testCases: [], testSuites: [], testRuns: [] };
+    }
+
+    const [bugs, testSuites, testCases, testRuns] = await Promise.all([
+      this.getBugs(projectId),
+      this.getTestSuites(projectId),
+      this.getTestCases(undefined, projectId),
+      this.getTestRuns(projectId),
+    ]);
+
+    const matchedBugs = bugs.filter(
+      (b) =>
+        b.bug_code.toLowerCase().includes(q) ||
+        b.title.toLowerCase().includes(q) ||
+        b.category.toLowerCase().includes(q) ||
+        (b.description && b.description.toLowerCase().includes(q))
+    );
+
+    const matchedSuites = testSuites.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.description && s.description.toLowerCase().includes(q))
+    );
+
+    const matchedCases = testCases.filter(
+      (c) =>
+        c.id.toLowerCase().includes(q) ||
+        c.title.toLowerCase().includes(q) ||
+        (c.description && c.description.toLowerCase().includes(q))
+    );
+
+    const matchedRuns = testRuns.filter((r) => r.name.toLowerCase().includes(q));
+
+    return {
+      bugs: matchedBugs,
+      testCases: matchedCases,
+      testSuites: matchedSuites,
+      testRuns: matchedRuns,
+    };
   }
 }
 

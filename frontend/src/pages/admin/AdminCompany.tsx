@@ -45,12 +45,12 @@ export const AdminCompany: React.FC = () => {
       </div>
 
       {notice && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center justify-between">
+        <div className="p-3.5 badge-passed rounded-xl text-xs flex items-center justify-between border">
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-600" />
+            <CheckCircle2 size={16} />
             <span>{notice}</span>
           </div>
-          <span className="text-[11px] text-emerald-700 bg-white/70 px-2 py-0.5 rounded font-mono">
+          <span className="text-[11px] bg-surface/80 px-2 py-0.5 rounded font-mono border">
             MVP Local Persistence
           </span>
         </div>
@@ -104,7 +104,7 @@ export const AdminCompany: React.FC = () => {
               <select
                 value={profile.industry}
                 onChange={(e) => setProfile({ ...profile, industry: e.target.value })}
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:ring-1 focus:ring-primary focus:outline-none"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:ring-1 focus:ring-primary focus:outline-none"
               >
                 <option value="Enterprise Software / Quality Engineering">Enterprise Software / Quality Engineering</option>
                 <option value="Fintech & Payments">Fintech & Payments</option>
@@ -118,7 +118,7 @@ export const AdminCompany: React.FC = () => {
               <select
                 value={profile.team_size}
                 onChange={(e) => setProfile({ ...profile, team_size: e.target.value })}
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:ring-1 focus:ring-primary focus:outline-none"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:ring-1 focus:ring-primary focus:outline-none"
               >
                 <option value="1-10 engineers">1-10 engineers</option>
                 <option value="10-50 engineers">10-50 engineers</option>
@@ -175,7 +175,7 @@ export const AdminCompany: React.FC = () => {
               <select
                 value={profile.session_timeout_minutes}
                 onChange={(e) => setProfile({ ...profile, session_timeout_minutes: Number(e.target.value) })}
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:ring-1 focus:ring-primary focus:outline-none"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:ring-1 focus:ring-primary focus:outline-none"
               >
                 <option value={15}>15 minutes</option>
                 <option value={30}>30 minutes</option>

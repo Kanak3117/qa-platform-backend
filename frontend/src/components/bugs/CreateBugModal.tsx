@@ -38,7 +38,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      api.getTestCases().then((cases) => {
+      api.getTestCases(undefined, currentProject?.id).then((cases) => {
         setTestCases(cases);
         if (initialTestCaseId) {
           const matched = cases.find(c => c.id === initialTestCaseId);
@@ -50,7 +50,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
       });
       if (initialTestCaseId) setTestCaseId(initialTestCaseId);
     }
-  }, [isOpen, initialTestCaseId]);
+  }, [isOpen, initialTestCaseId, currentProject?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +93,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Log Defect" maxWidth="xl">
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         {error && (
-          <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg">
+          <div className="p-3 badge-failed border rounded-lg">
             {error}
           </div>
         )}
@@ -105,7 +105,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Checkout fails on expired card with unhandled exception"
-            className="w-full text-xs px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
             required
           />
         </div>
@@ -116,7 +116,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="Payment / Checkout">Payment / Checkout</option>
               <option value="Authentication">Authentication</option>
@@ -132,7 +132,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
             <select
               value={testCaseId}
               onChange={(e) => setTestCaseId(e.target.value)}
-              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary truncate"
+              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary truncate"
             >
               <option value="">None / Standalone Defect</option>
               {testCases.map((tc) => (
@@ -150,7 +150,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
             <select
               value={severity}
               onChange={(e) => setSeverity(e.target.value as BugSeverity)}
-              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="Critical">Critical</option>
               <option value="High">High</option>
@@ -165,7 +165,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
-              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="P1">P1 (Immediate)</option>
               <option value="P2">P2 (High)</option>
@@ -179,7 +179,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
             <select
               value={assigneeId}
               onChange={(e) => setAssigneeId(e.target.value)}
-              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="">Unassigned</option>
               {users.map((u) => (
@@ -197,7 +197,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="w-full text-xs px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
@@ -208,7 +208,7 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Detailed description of defect, steps to reproduce, actual vs expected result..."
-            className="w-full text-xs px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 

@@ -2,22 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { Download, ShieldCheck, Bug, CheckCircle2 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { MetricCard } from '../components/common/MetricCard';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { Bug as IBug, TestExecution, TestCase } from '../types';
 
 export const Reports: React.FC = () => {
+  const { currentProject } = useAuth();
   const [bugs, setBugs] = useState<IBug[]>([]);
   const [executions, setExecutions] = useState<TestExecution[]>([]);
   const [cases, setCases] = useState<TestCase[]>([]);
 
   const loadData = () => {
-    Promise.all([api.getBugs(), api.getExecutions(), api.getTestCases()]).then(
-      ([b, e, c]) => {
-        setBugs(b);
-        setExecutions(e);
-        setCases(c);
-      }
-    );
+    Promise.all([
+      api.getBugs(currentProject?.id),
+      api.getExecutions(undefined, currentProject?.id),
+      api.getTestCases(undefined, currentProject?.id)
+    ]).then(([b, e, c]) => {
+      setBugs(b);
+      setExecutions(e);
+      setCases(c);
+    });
   };
 
   useEffect(() => {
@@ -26,7 +30,7 @@ export const Reports: React.FC = () => {
       loadData();
     });
     return () => unsub();
-  }, []);
+  }, [currentProject?.id]);
 
   const passedCount = executions.filter((e) => e.result === 'Passed').length;
   const totalExecs = executions.length || 1;
@@ -46,9 +50,14 @@ export const Reports: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-navy-900">QA Reports & Quality Metrics</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-navy-900">QA Reports & Quality Metrics</h1>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary-light text-primary border border-primary/20">
+              {currentProject?.name || 'Active Project'}
+            </span>
+          </div>
           <p className="text-xs text-secondary mt-1">
-            Audit test coverage health, defect density, and sprint readiness metrics.
+            Audit test coverage health, defect density, and sprint readiness metrics for {currentProject?.name}.
           </p>
         </div>
         <Button

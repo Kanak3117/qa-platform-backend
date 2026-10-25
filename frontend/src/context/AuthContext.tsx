@@ -15,6 +15,7 @@ interface AuthContextType {
   setCurrentProject: (project: Project) => void;
   refreshProjects: () => Promise<void>;
   refreshCurrentUser: () => Promise<void>;
+  updateUserContext: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,17 +23,35 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(api.getToken());
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [currentProject, setCurrentProjectState] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const resolveActiveProject = (userId: string, availableProjects: Project[]): Project | null => {
+    if (!availableProjects || availableProjects.length === 0) return null;
+    const savedProjectId = localStorage.getItem(`devvalidate_active_project_${userId}`);
+    if (savedProjectId) {
+      const match = availableProjects.find((p) => p.id === savedProjectId);
+      if (match) return match;
+    }
+    return availableProjects[0];
+  };
+
+  const setCurrentProject = (project: Project) => {
+    setCurrentProjectState(project);
+    if (user?.id) {
+      localStorage.setItem(`devvalidate_active_project_${user.id}`, project.id);
+    }
+  };
 
   const initAuth = async () => {
     setIsLoading(true);
     try {
+      let activeUser: User | null = null;
       if (token) {
-        const currentUser = await api.getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
+        activeUser = await api.getCurrentUser();
+        if (activeUser) {
+          setUser(activeUser);
         } else {
           api.setToken(null);
           setToken(null);
@@ -40,8 +59,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const fetchedProjects = await api.getProjects();
       setProjects(fetchedProjects);
-      if (fetchedProjects.length > 0) {
-        setCurrentProject(fetchedProjects[0]);
+      if (activeUser && fetchedProjects.length > 0) {
+        const resolved = resolveActiveProject(activeUser.id, fetchedProjects);
+        setCurrentProjectState(resolved);
+      } else if (fetchedProjects.length > 0) {
+        setCurrentProjectState(fetchedProjects[0]);
       }
     } catch {
       // Auth init failure
@@ -62,8 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(res.user);
       const prjs = await api.getProjects();
       setProjects(prjs);
-      if (prjs.length > 0 && !currentProject) {
-        setCurrentProject(prjs[0]);
+      const resolved = resolveActiveProject(res.user.id, prjs);
+      if (resolved) {
+        setCurrentProject(resolved);
       }
       return res.user;
     } finally {
@@ -83,6 +106,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshCurrentUser = async () => {
     const updated = await api.getCurrentUser();
+    if (updated) {
+      setUser(updated);
+    }
+  };
+
+  const updateUserContext = (updated: User) => {
     setUser(updated);
   };
 
@@ -95,8 +124,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshProjects = async () => {
     const prjs = await api.getProjects();
     setProjects(prjs);
-    if (!currentProject && prjs.length > 0) {
-      setCurrentProject(prjs[0]);
+    if (user && prjs.length > 0) {
+      const resolved = resolveActiveProject(user.id, prjs);
+      setCurrentProjectState(resolved);
     }
   };
 
@@ -115,6 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentProject,
         refreshProjects,
         refreshCurrentUser,
+        updateUserContext,
       }}
     >
       {children}

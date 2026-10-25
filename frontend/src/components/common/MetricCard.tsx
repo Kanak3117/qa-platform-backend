@@ -38,7 +38,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         <span className="text-3xl font-bold tracking-tight text-navy-900">{value}</span>
       </div>
       {subtext && (
-        <div className="mt-3 pt-2 border-t border-gray-100 flex items-center text-xs">
+        <div className="mt-3 pt-2 border-t border-border flex items-center text-xs">
           <span className={`font-medium ${getSubtextClass()}`}>{subtext}</span>
         </div>
       )}

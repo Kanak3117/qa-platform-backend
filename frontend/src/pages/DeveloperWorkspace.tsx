@@ -12,18 +12,22 @@ import { Button } from '../components/common/Button';
 import { MetricCard } from '../components/common/MetricCard';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { SeverityBadge } from '../components/common/SeverityBadge';
+import { PriorityBadge } from '../components/common/PriorityBadge';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { Bug as IBug } from '../types';
 
 export const DeveloperWorkspace: React.FC = () => {
   const navigate = useNavigate();
+  const { currentProject, user } = useAuth();
   const [assignedBugs, setAssignedBugs] = useState<IBug[]>([]);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
   const loadData = async () => {
-    const allBugs = await api.getBugs();
-    // Show bugs assigned to developer usr-102 or open
-    setAssignedBugs(allBugs.filter((b) => b.assignee_id === 'usr-102' || b.status === 'In Progress' || b.status === 'Open'));
+    const allBugs = await api.getBugs(currentProject?.id);
+    // Show bugs assigned to developer usr-102 or current user or open in this project
+    const currentId = user?.id || 'usr-102';
+    setAssignedBugs(allBugs.filter((b) => b.assignee_id === currentId || b.status === 'In Progress' || b.status === 'Open'));
   };
 
   useEffect(() => {
@@ -32,7 +36,7 @@ export const DeveloperWorkspace: React.FC = () => {
       loadData();
     });
     return () => unsub();
-  }, []);
+  }, [currentProject?.id, user?.id]);
 
   const handleMarkFixed = async (e: React.MouseEvent, bugId: string) => {
     e.stopPropagation();
@@ -61,9 +65,12 @@ export const DeveloperWorkspace: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tight text-navy-900">
               Developer Workspace
             </h1>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary-light text-primary border border-primary/20">
+              {currentProject?.name || 'Active Project'}
+            </span>
           </div>
           <p className="text-xs text-secondary mt-1">
-            Defect remediation queue, stack traces, and verification hand-off.
+            Defect remediation queue, stack traces, and verification hand-off for {currentProject?.name}.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -132,7 +139,7 @@ export const DeveloperWorkspace: React.FC = () => {
                 <th className="py-3 px-4 text-right">Quick Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {assignedBugs.map((bug) => (
                 <tr
                   key={bug.id}
@@ -155,9 +162,7 @@ export const DeveloperWorkspace: React.FC = () => {
                     <StatusBadge status={bug.status} size="sm" />
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap">
-                    <span className="font-semibold text-navy-800 bg-gray-100 px-2 py-0.5 rounded text-[11px]">
-                      {bug.priority}
-                    </span>
+                    <PriorityBadge priority={bug.priority} size="sm" />
                   </td>
                   <td className="py-3 px-4 text-right whitespace-nowrap">
                     {bug.status !== 'Fixed' && bug.status !== 'Closed' && (
@@ -171,7 +176,7 @@ export const DeveloperWorkspace: React.FC = () => {
                       </Button>
                     )}
                     {bug.status === 'Fixed' && (
-                      <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200">
+                      <span className="text-[11px] font-medium badge-passed px-2.5 py-1 rounded border">
                         Ready for Retest
                       </span>
                     )}

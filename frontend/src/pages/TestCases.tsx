@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Search, PlayCircle, Filter } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
+import { PriorityBadge } from '../components/common/PriorityBadge';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { TestCase, TestSuite } from '../types';
 
 export const TestCases: React.FC = () => {
   const navigate = useNavigate();
+  const { currentProject } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const suiteParam = searchParams.get('suiteId');
   const [cases, setCases] = useState<TestCase[]>([]);
   const [suites, setSuites] = useState<TestSuite[]>([]);
   const [filteredCases, setFilteredCases] = useState<TestCase[]>([]);
   const [search, setSearch] = useState('');
-  const [selectedSuite, setSelectedSuite] = useState<string>('ALL');
+  const [selectedSuite, setSelectedSuite] = useState<string>(suiteParam || 'ALL');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // Form fields
@@ -25,10 +30,15 @@ export const TestCases: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadData = () => {
-    Promise.all([api.getTestCases(), api.getTestSuites()]).then(([c, s]) => {
+    Promise.all([
+      api.getTestCases(undefined, currentProject?.id),
+      api.getTestSuites(currentProject?.id)
+    ]).then(([c, s]) => {
       setCases(c);
       setSuites(s);
-      if (s.length > 0 && !suiteId) setSuiteId(s[0].id);
+      if (s.length > 0) {
+        setSuiteId(s[0].id);
+      }
     });
   };
 
@@ -38,7 +48,15 @@ export const TestCases: React.FC = () => {
       loadData();
     });
     return () => unsub();
-  }, [suiteId]);
+  }, [currentProject?.id]);
+
+  useEffect(() => {
+    if (suiteParam) {
+      setSelectedSuite(suiteParam);
+    } else {
+      setSelectedSuite('ALL');
+    }
+  }, [suiteParam]);
 
   useEffect(() => {
     let result = [...cases];
@@ -53,6 +71,15 @@ export const TestCases: React.FC = () => {
     }
     setFilteredCases(result);
   }, [search, selectedSuite, cases]);
+
+  const handleSuiteChange = (newSuite: string) => {
+    setSelectedSuite(newSuite);
+    if (newSuite === 'ALL') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ suiteId: newSuite });
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +134,7 @@ export const TestCases: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search test case title or ID (e.g. tc-001)..."
-            className="w-full text-xs bg-soft border border-border rounded-lg pl-9 pr-3 py-2 text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white"
+            className="w-full text-xs bg-soft border border-border rounded-lg pl-9 pr-3 py-2 text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface"
           />
         </div>
 
@@ -115,7 +142,7 @@ export const TestCases: React.FC = () => {
           <Filter size={14} className="text-secondary" />
           <select
             value={selectedSuite}
-            onChange={(e) => setSelectedSuite(e.target.value)}
+            onChange={(e) => handleSuiteChange(e.target.value)}
             className="text-xs bg-soft border border-border rounded-lg px-2.5 py-1.5 text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="ALL">All Test Suites</option>
@@ -143,7 +170,14 @@ export const TestCases: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredCases.map((tc) => (
+              {filteredCases.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-secondary">
+                    No test cases found in this test suite.
+                  </td>
+                </tr>
+              ) : (
+                filteredCases.map((tc) => (
                 <tr key={tc.id} className="hover:bg-soft transition-colors group">
                   <td className="py-3 px-4 font-mono font-semibold text-primary whitespace-nowrap">
                     {tc.id}
@@ -158,12 +192,10 @@ export const TestCases: React.FC = () => {
                     {getSuiteName(tc.test_suite_id)}
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap">
-                    <span className="font-semibold text-navy-800 bg-gray-100 px-2 py-0.5 rounded text-[11px]">
-                      {tc.priority}
-                    </span>
+                    <PriorityBadge priority={tc.priority} size="sm" />
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap">
-                    <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[11px] font-medium">
+                    <span className="badge-passed px-2 py-0.5 rounded text-[11px] font-medium border inline-flex items-center">
                       {tc.status}
                     </span>
                   </td>
@@ -177,7 +209,7 @@ export const TestCases: React.FC = () => {
                     </Button>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -204,7 +236,7 @@ export const TestCases: React.FC = () => {
               <select
                 value={suiteId}
                 onChange={(e) => setSuiteId(e.target.value)}
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 {suites.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -219,7 +251,7 @@ export const TestCases: React.FC = () => {
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="Critical">Critical</option>
                 <option value="High">High</option>

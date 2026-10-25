@@ -4,10 +4,34 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dailoqa — AI-Powered QA Workspace</title>
+    <title>DevValidate — Software Quality Management</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        try {
+          var userTheme = localStorage.getItem('devvalidate_theme_public');
+          var authUser = localStorage.getItem('user');
+          if (authUser) {
+            try {
+              var parsed = JSON.parse(authUser);
+              if (parsed && parsed.id) {
+                var userKeyTheme = localStorage.getItem('devvalidate_theme_' + parsed.id);
+                if (userKeyTheme === 'dark' || userKeyTheme === 'light') {
+                  userTheme = userKeyTheme;
+                }
+              }
+            } catch (err) {}
+          }
+          if (userTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-background text-navy-900 font-sans antialiased min-h-screen">
     <div id="root"></div>

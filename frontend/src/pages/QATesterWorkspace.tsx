@@ -13,23 +13,27 @@ import { Button } from '../components/common/Button';
 import { MetricCard } from '../components/common/MetricCard';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { SeverityBadge } from '../components/common/SeverityBadge';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { TestCase, TestRun, Bug as IBug } from '../types';
 
 export const QATesterWorkspace: React.FC = () => {
   const navigate = useNavigate();
+  const { currentProject } = useAuth();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [testRuns, setTestRuns] = useState<TestRun[]>([]);
   const [retestBugs, setRetestBugs] = useState<IBug[]>([]);
 
   const loadData = () => {
-    Promise.all([api.getTestCases(), api.getTestRuns(), api.getBugs()]).then(
-      ([cases, runs, bugs]) => {
-        setTestCases(cases);
-        setTestRuns(runs);
-        setRetestBugs(bugs.filter((b) => b.status === 'Retest' || b.status === 'Open'));
-      }
-    );
+    Promise.all([
+      api.getTestCases(undefined, currentProject?.id),
+      api.getTestRuns(currentProject?.id),
+      api.getBugs(currentProject?.id)
+    ]).then(([cases, runs, bugs]) => {
+      setTestCases(cases);
+      setTestRuns(runs);
+      setRetestBugs(bugs.filter((b) => b.status === 'Retest' || b.status === 'Open'));
+    });
   };
 
   useEffect(() => {
@@ -38,7 +42,7 @@ export const QATesterWorkspace: React.FC = () => {
       loadData();
     });
     return () => unsub();
-  }, []);
+  }, [currentProject?.id]);
 
   return (
     <div className="space-y-6">
@@ -52,9 +56,12 @@ export const QATesterWorkspace: React.FC = () => {
             <h1 className="text-2xl font-bold tracking-tight text-navy-900">
               QA Tester Workspace
             </h1>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary-light text-primary border border-primary/20">
+              {currentProject?.name || 'Active Project'}
+            </span>
           </div>
           <p className="text-xs text-secondary mt-1">
-            Focus view for manual execution, test automation triage, and fix verification.
+            Focus view for manual execution, test automation triage, and fix verification in {currentProject?.name}.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -126,11 +133,11 @@ export const QATesterWorkspace: React.FC = () => {
                 <div
                   key={run.id}
                   onClick={() => navigate('/test-runs')}
-                  className="p-3.5 rounded-lg border border-border bg-soft hover:bg-gray-100/80 cursor-pointer transition-colors"
+                  className="p-3.5 rounded-lg border border-border bg-soft hover:bg-border/40 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="font-semibold text-xs text-navy-900">{run.name}</span>
-                    <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    <span className="text-[10px] font-medium badge-inprogress px-2 py-0.5 rounded border">
                       In Progress
                     </span>
                   </div>
@@ -160,7 +167,7 @@ export const QATesterWorkspace: React.FC = () => {
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h3 className="text-sm font-semibold text-navy-900">Retest & Verification Queue</h3>
-              <span className="text-xs text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded">
+              <span className="text-xs font-semibold badge-retest px-2 py-0.5 rounded border">
                 Fix Verification
               </span>
             </div>

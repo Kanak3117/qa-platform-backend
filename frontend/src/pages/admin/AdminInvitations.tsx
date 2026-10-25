@@ -107,25 +107,25 @@ export const AdminInvitations: React.FC = () => {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {invitations.map((inv) => (
                 <tr key={inv.id} className="hover:bg-soft transition-colors">
                   <td className="py-3 px-4 font-semibold text-navy-900 whitespace-nowrap">
                     {inv.email}
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap">
-                    <span className="font-medium bg-gray-100 text-navy-800 px-2 py-0.5 rounded text-[11px]">
+                    <span className="font-medium badge-low px-2 py-0.5 rounded text-[11px] border">
                       {inv.role === 'QA_ENGINEER' ? 'QA Tester' : inv.role}
                     </span>
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold border ${
                         inv.status === 'Pending'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          ? 'badge-high'
                           : inv.status === 'Accepted'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-gray-100 text-gray-600 border border-gray-200'
+                          ? 'badge-passed'
+                          : 'badge-low'
                       }`}
                     >
                       {inv.status}
@@ -190,7 +190,7 @@ export const AdminInvitations: React.FC = () => {
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as ProjectRole)}
-              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="QA_ENGINEER">QA Tester (QA Engineer)</option>
               <option value="DEVELOPER">Developer</option>

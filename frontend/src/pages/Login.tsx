@@ -50,10 +50,10 @@ export const Login: React.FC = () => {
           </Link>
         </div>
         <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-navy-900">
-          Sign in to Dailoqa
+          Sign in to DevValidate
         </h2>
         <p className="mt-1 text-center text-xs text-secondary">
-          AI-Powered QA Workspace & Defect Intelligence
+          AI-Powered Software Quality & Defect Intelligence
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export const Login: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-navy-900"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface text-navy-900"
                 placeholder="name@company.com"
               />
             </div>
@@ -98,7 +98,7 @@ export const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-navy-900"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface text-navy-900"
                 placeholder="••••••••"
               />
             </div>
@@ -122,7 +122,7 @@ export const Login: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleQuickFill('sarah.qa@dailoqa.io')}
-                className="p-1.5 rounded border border-border bg-soft hover:bg-gray-100 text-[11px] font-medium text-navy-900 truncate"
+                className="p-1.5 rounded border border-border bg-soft hover:bg-border/60 text-[11px] font-medium text-navy-900 truncate"
                 title="QA Tester (Standard USER role - no admin access)"
               >
                 QA Tester
@@ -130,7 +130,7 @@ export const Login: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleQuickFill('alex.dev@dailoqa.io')}
-                className="p-1.5 rounded border border-border bg-soft hover:bg-gray-100 text-[11px] font-medium text-navy-900 truncate"
+                className="p-1.5 rounded border border-border bg-soft hover:bg-border/60 text-[11px] font-medium text-navy-900 truncate"
                 title="Developer (Standard USER role - no admin access)"
               >
                 Developer
@@ -138,7 +138,7 @@ export const Login: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleQuickFill('elena.admin@dailoqa.io')}
-                className="p-1.5 rounded border border-border bg-purple-50 hover:bg-purple-100 text-[11px] font-semibold text-purple-700 truncate border-purple-200"
+                className="p-1.5 rounded border badge-retest text-[11px] font-semibold truncate hover:opacity-90"
                 title="Admin (System Administrator role - full admin access)"
               >
                 Admin

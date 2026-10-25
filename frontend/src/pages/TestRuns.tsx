@@ -17,7 +17,10 @@ export const TestRuns: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadData = () => {
-    Promise.all([api.getTestRuns(), api.getExecutions()]).then(([r, e]) => {
+    Promise.all([
+      api.getTestRuns(currentProject?.id),
+      api.getExecutions(undefined, currentProject?.id)
+    ]).then(([r, e]) => {
       setRuns(r);
       setExecutions(e);
     });
@@ -29,7 +32,7 @@ export const TestRuns: React.FC = () => {
       loadData();
     });
     return () => unsub();
-  }, []);
+  }, [currentProject?.id]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

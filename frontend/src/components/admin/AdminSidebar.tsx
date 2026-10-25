@@ -35,11 +35,11 @@ export const AdminSidebar: React.FC = () => {
         {/* Brand header */}
         <div className="px-5 py-5 border-b border-border/80">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-navy-900 text-white flex items-center justify-center font-bold text-base shadow-sm">
-              <ShieldAlert size={18} className="text-amber-400" />
+            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-base shadow-sm">
+              <ShieldAlert size={18} className="text-amber-300" />
             </div>
             <div>
-              <div className="font-bold text-navy-900 text-base leading-tight tracking-tight">Dailoqa</div>
+              <div className="font-bold text-navy-900 text-base leading-tight tracking-tight">DevValidate</div>
               <div className="text-[11px] text-primary font-semibold flex items-center gap-1">
                 Admin Console
               </div>

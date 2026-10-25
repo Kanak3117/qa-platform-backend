@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { CreateBugModal } from '../components/bugs/CreateBugModal';
+import { PriorityBadge } from '../components/common/PriorityBadge';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { TestCase, TestRun, TestExecution as ITestExecution, ExecutionResult, Bug } from '../types';
@@ -20,7 +21,7 @@ import { MOCK_USERS } from '../lib/mockData';
 export const TestExecutionPage: React.FC = () => {
   const { testCaseId } = useParams<{ testCaseId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, currentProject } = useAuth();
 
   const [testCase, setTestCase] = useState<TestCase | null>(null);
   const [testRuns, setTestRuns] = useState<TestRun[]>([]);
@@ -32,16 +33,23 @@ export const TestExecutionPage: React.FC = () => {
   const [isLogBugOpen, setIsLogBugOpen] = useState(false);
 
   useEffect(() => {
-    api.getTestRuns().then((runs) => {
+    api.getTestRuns(currentProject?.id).then((runs) => {
       setTestRuns(runs);
-      if (runs.length > 0 && !selectedRunId) setSelectedRunId(runs[0].id);
+      if (runs.length > 0) {
+        setSelectedRunId((prev) => (runs.some((r) => r.id === prev) ? prev : runs[0].id));
+      } else {
+        setSelectedRunId('');
+      }
     });
+  }, [currentProject?.id]);
+
+  useEffect(() => {
     const unsub = api.subscribe(() => {
-      api.getTestRuns().then(setTestRuns);
-      if (selectedRunId) api.getExecutions(selectedRunId).then(setExecutions);
+      api.getTestRuns(currentProject?.id).then(setTestRuns);
+      if (selectedRunId) api.getExecutions(selectedRunId, currentProject?.id).then(setExecutions);
     });
     return () => unsub();
-  }, [selectedRunId]);
+  }, [selectedRunId, currentProject?.id]);
 
   useEffect(() => {
     if (testCaseId) {
@@ -49,24 +57,24 @@ export const TestExecutionPage: React.FC = () => {
         if (tc) {
           setTestCase(tc);
         } else {
-          // If no specific case found, get first available
-          api.getTestCases().then((cases) => {
+          // If no specific case found, get first available in this project
+          api.getTestCases(undefined, currentProject?.id).then((cases) => {
             if (cases.length > 0) setTestCase(cases[0]);
           });
         }
       });
     } else {
-      api.getTestCases().then((cases) => {
+      api.getTestCases(undefined, currentProject?.id).then((cases) => {
         if (cases.length > 0) setTestCase(cases[0]);
       });
     }
-  }, [testCaseId]);
+  }, [testCaseId, currentProject?.id]);
 
   useEffect(() => {
     if (selectedRunId) {
-      api.getExecutions(selectedRunId).then(setExecutions);
+      api.getExecutions(selectedRunId, currentProject?.id).then(setExecutions);
     }
-  }, [selectedRunId]);
+  }, [selectedRunId, currentProject?.id]);
 
   const handleSubmitResult = async () => {
     if (!testCase || !selectedRunId) return;
@@ -104,11 +112,12 @@ export const TestExecutionPage: React.FC = () => {
   }
 
   const caseExecutions = executions.filter((e) => e.test_case_id === testCase.id);
+  const currentRun = testRuns.find((r) => r.id === selectedRunId);
 
   return (
     <div className="space-y-6">
-      {/* Top back link */}
-      <div className="flex items-center justify-between">
+      {/* Top back link & Test Run selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <button
           onClick={() => navigate('/test-cases')}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary hover:text-navy-900 transition-colors"
@@ -116,36 +125,48 @@ export const TestExecutionPage: React.FC = () => {
           <ArrowLeft size={16} /> Back to Test Cases
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-secondary">Test Run:</span>
-          <select
-            value={selectedRunId}
-            onChange={(e) => setSelectedRunId(e.target.value)}
-            className="text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 text-navy-900 font-medium focus:ring-1 focus:ring-primary"
-          >
-            {testRuns.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {testRuns.length === 0 ? (
+          <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2 rounded-lg text-xs">
+            <span className="text-amber-800 dark:text-amber-300 font-medium">No test runs found for this project.</span>
+            <Button size="sm" onClick={() => navigate('/test-runs')}>
+              Create Test Run
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-secondary font-medium">Test Run:</span>
+            <select
+              value={selectedRunId}
+              onChange={(e) => setSelectedRunId(e.target.value)}
+              className="text-xs bg-surface border border-border rounded-lg px-2.5 py-1.5 text-navy-900 font-medium focus:ring-1 focus:ring-primary max-w-xs truncate cursor-pointer"
+            >
+              {testRuns.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Main Execution Card */}
       <div className="bg-surface rounded-card border border-border p-6 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
               <span className="text-xs font-bold text-primary bg-primary-light px-2.5 py-0.5 rounded">
                 {testCase.id}
               </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-navy-800">
-                Priority: {testCase.priority}
-              </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <PriorityBadge priority={testCase.priority} size="sm" />
+              <span className="text-xs font-semibold px-2 py-0.5 rounded border badge-passed">
                 {testCase.status}
               </span>
+              {currentRun && (
+                <span className="text-xs font-medium text-secondary bg-soft border border-border px-2 py-0.5 rounded truncate max-w-[280px]">
+                  Execution Run: <strong className="text-navy-900">{currentRun.name}</strong>
+                </span>
+              )}
             </div>
             <h1 className="text-lg font-bold text-navy-900">{testCase.title}</h1>
             <p className="text-xs text-secondary mt-1">{testCase.description}</p>
@@ -259,18 +280,18 @@ export const TestExecutionPage: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {caseExecutions.map((exec) => (
                   <tr key={exec.id} className="hover:bg-soft">
                     <td className="py-2.5 px-3 font-mono text-secondary">{exec.id}</td>
                     <td className="py-2.5 px-3">
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${
                           exec.result === 'Passed'
-                            ? 'bg-emerald-50 text-emerald-700'
+                            ? 'badge-passed'
                             : exec.result === 'Failed'
-                            ? 'bg-rose-50 text-rose-700'
-                            : 'bg-amber-50 text-amber-700'
+                            ? 'badge-failed'
+                            : 'badge-high'
                         }`}
                       >
                         {exec.result === 'Passed' && <CheckCircle2 size={12} />}

@@ -18,7 +18,10 @@ export const TestSuites: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadData = () => {
-    Promise.all([api.getTestSuites(), api.getTestCases()]).then(([s, c]) => {
+    Promise.all([
+      api.getTestSuites(currentProject?.id),
+      api.getTestCases(undefined, currentProject?.id)
+    ]).then(([s, c]) => {
       setSuites(s);
       setCases(c);
     });
@@ -30,7 +33,7 @@ export const TestSuites: React.FC = () => {
       loadData();
     });
     return () => unsub();
-  }, []);
+  }, [currentProject?.id]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +103,7 @@ export const TestSuites: React.FC = () => {
               <div className="mt-5 pt-3 border-t border-border/70 flex items-center justify-between">
                 <span className="text-[11px] font-mono text-muted">{suite.id}</span>
                 <button
-                  onClick={() => navigate('/test-cases')}
+                  onClick={() => navigate(`/test-cases?suiteId=${suite.id}`)}
                   className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
                 >
                   View Cases <ArrowRight size={13} />

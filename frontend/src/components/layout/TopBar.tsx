@@ -1,37 +1,143 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Bell, Menu, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Menu, Check, CheckCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { Notification } from '../../types';
+import { GlobalSearch } from '../search/GlobalSearch';
+import { ProfileDropdown } from '../profile/ProfileDropdown';
 
 interface TopBarProps {
   onToggleSidebar?: () => void;
-  onSearch?: (query: string) => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onSearch }) => {
-  const { currentProject, user } = useAuth();
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (isNaN(diffInSeconds) || diffInSeconds < 0 || diffInSeconds < 60) {
+    return 'Just now';
+  }
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes}m ago`;
+  }
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours}h ago`;
+  }
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) {
+    return 'Yesterday';
+  }
+  if (diffInDays < 7) {
+    return `${diffInDays}d ago`;
+  }
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function getNotificationRoute(message: string): string {
+  const bugMatch = message.match(/(?:DEV-)?BUG-\d+/i);
+  if (bugMatch) {
+    return '/bugs';
+  }
+  const lower = message.toLowerCase();
+  if (lower.includes('bug') || lower.includes('defect')) {
+    return '/bugs';
+  }
+  if (lower.includes('test run') || lower.includes('suite')) {
+    return '/test-runs';
+  }
+  if (lower.includes('test execution') || lower.includes('test case')) {
+    return '/test-execution';
+  }
+  if (lower.includes('project') || lower.includes('member') || lower.includes('role')) {
+    return '/admin/users';
+  }
+  return '/bugs';
+}
+
+export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [searchVal, setSearchVal] = useState('');
+  const [companyName, setCompanyName] = useState<string>('Dailoqa Technologies Inc.');
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  const loadNotifications = async () => {
+    const list = await api.getNotifications(user?.id);
+    setNotifications(list);
+  };
+
+  const loadCompanyProfile = async () => {
+    try {
+      const profile = await api.getCompanyProfile();
+      if (profile?.company_name) {
+        setCompanyName(profile.company_name);
+      }
+    } catch {
+      // Keep existing default
+    }
+  };
 
   useEffect(() => {
-    api.getNotifications().then(setNotifications);
-  }, []);
+    loadNotifications();
+    loadCompanyProfile();
+    const unsub = api.subscribe(() => {
+      loadNotifications();
+      loadCompanyProfile();
+    });
+    return () => unsub();
+  }, [user?.id]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowNotifications(false);
+      }
+    };
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  const handleMarkAsRead = async (id: string) => {
+  const handleMarkAsRead = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     await api.markNotificationRead(id);
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchVal(val);
-    if (onSearch) onSearch(val);
+  const handleMarkAllRead = async () => {
+    await api.markAllNotificationsRead();
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  };
+
+  const handleNotificationClick = async (notif: Notification) => {
+    if (!notif.is_read) {
+      await api.markNotificationRead(notif.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
+      );
+    }
+    setShowNotifications(false);
+    const targetRoute = getNotificationRoute(notif.message);
+    navigate(targetRoute);
   };
 
   return (
@@ -40,79 +146,98 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onSearch }) => 
         {onToggleSidebar && (
           <button
             onClick={onToggleSidebar}
-            className="md:hidden text-secondary hover:text-navy-900 p-1 rounded-md hover:bg-gray-100"
+            className="md:hidden text-secondary hover:text-navy-900 p-1.5 rounded-lg hover:bg-soft transition-colors"
           >
             <Menu size={20} />
           </button>
         )}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-secondary border border-gray-200">
-            QA PLATFORM
-          </span>
-          <span className="text-sm font-semibold text-navy-900 truncate max-w-[280px]">
-            {currentProject?.name || 'Dailoqa Core Platform'}
+          <span
+            className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-primary-light text-primary border border-primary/20 tracking-wide shrink-0 max-w-[280px] truncate"
+            title={`Company Legal Name: ${companyName}`}
+          >
+            {companyName}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Search Field */}
-        <div className="relative hidden sm:block w-64 md:w-80">
-          <Search size={15} className="absolute left-3 top-2.5 text-muted pointer-events-none" />
-          <input
-            type="text"
-            value={searchVal}
-            onChange={handleSearchChange}
-            placeholder="Search test cases, bugs (e.g. BUG-00421)..."
-            className="w-full text-xs bg-soft border border-border rounded-lg pl-9 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-navy-900 transition-colors"
-          />
+      <div className="flex items-center gap-3 sm:gap-4">
+        {/* Global Search with Centered Icon and Scoped Project Results */}
+        <div className="hidden sm:block">
+          <GlobalSearch />
         </div>
 
         {/* Notifications Popover */}
-        <div className="relative">
+        <div className="relative" ref={popoverRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative text-secondary hover:text-navy-900 p-2 rounded-lg hover:bg-soft transition-colors"
             title="Notifications"
+            aria-expanded={showNotifications}
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-surface animate-pulse"></span>
             )}
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-surface rounded-card border border-border shadow-lg py-2 z-50">
-              <div className="px-4 py-2 border-b border-border flex items-center justify-between">
-                <span className="text-xs font-semibold text-navy-900">Notifications</span>
-                <span className="text-[11px] text-muted">{unreadCount} unread</span>
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-surface rounded-xl border border-border shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-navy-900">Notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-[11px] font-medium text-primary hover:text-primary-hover flex items-center gap-1 transition-colors"
+                  >
+                    <CheckCheck size={13} />
+                    Mark all read
+                  </button>
+                )}
               </div>
-              <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+
+              <div className="max-h-80 overflow-y-auto divide-y divide-border">
                 {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-secondary">
-                    No new notifications
+                  <div className="p-6 text-center text-xs text-secondary">
+                    No notifications for your account.
                   </div>
                 ) : (
                   notifications.map((notif) => (
                     <div
                       key={notif.id}
-                      className={`p-3 text-xs flex items-start justify-between gap-2 hover:bg-soft transition-colors ${
-                        !notif.is_read ? 'bg-primary-light/30' : ''
+                      onClick={() => handleNotificationClick(notif)}
+                      className={`p-3 text-xs flex items-start justify-between gap-3 hover:bg-soft cursor-pointer transition-colors ${
+                        !notif.is_read ? 'bg-primary-light/25 font-medium' : ''
                       }`}
                     >
-                      <div>
-                        <p className="text-navy-900 font-medium leading-relaxed">{notif.message}</p>
-                        <span className="text-[10px] text-muted">
-                          {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-navy-900 leading-snug break-words">
+                          {notif.message}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-muted">
+                            {formatRelativeTime(notif.created_at)}
+                          </span>
+                          {!notif.is_read && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+                          )}
+                        </div>
                       </div>
+
                       {!notif.is_read && (
                         <button
-                          onClick={() => handleMarkAsRead(notif.id)}
-                          className="text-primary hover:text-primary-hover p-1 rounded"
+                          onClick={(e) => handleMarkAsRead(e, notif.id)}
+                          className="text-secondary hover:text-primary p-1 rounded-md hover:bg-surface border border-transparent hover:border-border transition-colors shrink-0"
                           title="Mark as read"
                         >
-                          <Check size={14} />
+                          <Check size={13} />
                         </button>
                       )}
                     </div>
@@ -123,11 +248,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleSidebar, onSearch }) => 
           )}
         </div>
 
-        {/* User indicator */}
-        <div className="flex items-center gap-2 pl-2 border-l border-border">
-          <div className="w-8 h-8 rounded-full bg-primary text-white font-semibold flex items-center justify-center text-xs shadow-xs">
-            {user?.name ? user.name.slice(0, 2).toUpperCase() : 'QA'}
-          </div>
+        {/* User Profile Menu */}
+        <div className="pl-2 border-l border-border">
+          <ProfileDropdown />
         </div>
       </div>
     </header>

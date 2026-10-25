@@ -10,11 +10,11 @@ export const Forbidden403: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mb-4 shadow-xs">
+      <div className="w-16 h-16 rounded-2xl badge-failed flex items-center justify-center mb-4 shadow-xs border">
         <ShieldAlert size={32} />
       </div>
 
-      <span className="text-xs font-bold text-rose-600 uppercase tracking-widest bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 mb-2">
+      <span className="text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border mb-2 badge-failed">
         Error 403 — Unauthorized
       </span>
 
@@ -23,7 +23,7 @@ export const Forbidden403: React.FC = () => {
       </h1>
 
       <p className="text-xs text-secondary max-w-md mt-2 leading-relaxed">
-        You are authenticated as <strong className="text-navy-900">{user?.name}</strong> ({user?.email}) with system role <code className="bg-gray-100 text-navy-800 px-1 py-0.5 rounded font-mono font-semibold">{user?.system_role || 'USER'}</code>. The Admin Console is restricted strictly to accounts with the <strong className="text-navy-900">ADMIN</strong> role.
+        You are authenticated as <strong className="text-navy-900">{user?.name}</strong> ({user?.email}) with system role <code className="bg-soft border border-border text-navy-800 px-1.5 py-0.5 rounded font-mono font-semibold">{user?.system_role || 'USER'}</code>. The Admin Console is restricted strictly to accounts with the <strong className="text-navy-900">ADMIN</strong> role.
       </p>
 
       <div className="flex items-center gap-3 mt-6">

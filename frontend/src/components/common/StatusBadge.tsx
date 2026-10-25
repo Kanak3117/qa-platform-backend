@@ -7,22 +7,27 @@ interface StatusBadgeProps {
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
-  const getStyles = () => {
+  const getBadgeClass = () => {
     switch (status) {
       case 'Open':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800';
       case 'In Progress':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'badge-inprogress';
       case 'Fixed':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Passed':
+      case 'Resolved':
+      case 'Active':
+        return 'badge-passed';
       case 'Retest':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
+        return 'badge-retest';
       case 'Closed':
-        return 'bg-gray-100 text-gray-600 border-gray-200';
+        return 'badge-closed';
       case 'Reopened':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'Failed':
+      case 'Blocked':
+        return 'badge-failed';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'badge-low';
     }
   };
 
@@ -30,7 +35,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
 
   return (
     <span
-      className={`inline-flex items-center rounded-md border font-medium ${getStyles()} ${sizeClasses}`}
+      className={`inline-flex items-center rounded-md border font-medium ${getBadgeClass()} ${sizeClasses}`}
     >
       <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current opacity-70"></span>
       {status}

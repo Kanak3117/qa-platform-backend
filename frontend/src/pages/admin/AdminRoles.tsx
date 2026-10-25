@@ -9,7 +9,7 @@ export const AdminRoles: React.FC = () => {
       badge: 'SystemRole.ADMIN',
       description: 'Superuser with unrestricted access to team configuration, company security settings, and project provisioning.',
       icon: ShieldAlert,
-      color: 'bg-purple-50 text-purple-700 border-purple-200',
+      color: 'badge-retest',
     },
     {
       title: 'QA Tester / Engineer',
@@ -17,7 +17,7 @@ export const AdminRoles: React.FC = () => {
       badge: 'ProjectRole.QA_ENGINEER',
       description: 'Primary quality guardian responsible for test suite curation, executing runs, triaging defects, and final retest sign-off.',
       icon: FlaskConical,
-      color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      color: 'badge-passed',
     },
     {
       title: 'Developer',
@@ -25,7 +25,7 @@ export const AdminRoles: React.FC = () => {
       badge: 'ProjectRole.DEVELOPER',
       description: 'Engineering contributor focused on defect investigation, technical remediation, logs/traces, and submitting fixes.',
       icon: Code2,
-      color: 'bg-blue-50 text-blue-700 border-blue-200',
+      color: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900',
     },
     {
       title: 'Stakeholder / Viewer',
@@ -33,7 +33,7 @@ export const AdminRoles: React.FC = () => {
       badge: 'ProjectRole.STAKEHOLDER',
       description: 'Executive or client observer with view access to quality reports, release readiness metrics, and audit history.',
       icon: Eye,
-      color: 'bg-gray-100 text-gray-700 border-gray-200',
+      color: 'badge-low',
     },
   ];
 

@@ -10,14 +10,18 @@ import {
   FlaskConical,
   ShieldAlert,
   PlayCircle,
-  BarChart3
+  BarChart3,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const handleOpenWorkspace = () => {
     if (user?.system_role === 'ADMIN') {
@@ -39,7 +43,7 @@ export const LandingPage: React.FC = () => {
               <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-base shadow-sm group-hover:bg-primary-hover transition-colors">
                 <Bug size={18} />
               </div>
-              <span className="font-bold text-navy-900 text-lg tracking-tight">Dailoqa</span>
+              <span className="font-bold text-navy-900 text-lg tracking-tight">DevValidate</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-secondary">
@@ -51,6 +55,41 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Public Landing Page Theme Toggle */}
+            <div
+              className="flex items-center gap-1.5 py-1 px-1.5 rounded-full bg-soft border border-border"
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              <div
+                role="switch"
+                aria-checked={theme === 'dark'}
+                aria-label="Toggle dark mode"
+                tabIndex={0}
+                onClick={toggleTheme}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    toggleTheme();
+                  }
+                }}
+                className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary ${
+                  theme === 'dark' ? 'bg-[#4F46E5]' : 'bg-[#D1D5DB]'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transform transition-transform duration-200 ease-in-out ${
+                    theme === 'dark' ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                >
+                  {theme === 'dark' ? (
+                    <Moon size={11} className="text-indigo-600" />
+                  ) : (
+                    <Sun size={11} className="text-amber-500" />
+                  )}
+                </div>
+              </div>
+            </div>
+
             {isAuthenticated ? (
               <Button onClick={handleOpenWorkspace} size="sm">
                 Open Workspace <ArrowRight size={14} />
@@ -78,7 +117,7 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-light text-primary text-xs font-semibold mb-6 border border-primary/20">
             <Sparkles size={14} />
-            <span>AI-POWERED QA & BUG INTELLIGENCE</span>
+            <span>AI-POWERED SOFTWARE QUALITY PLATFORM</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-navy-900 leading-[1.12]">
@@ -86,7 +125,7 @@ export const LandingPage: React.FC = () => {
           </h1>
 
           <p className="mt-5 text-sm sm:text-base text-secondary leading-relaxed max-w-2xl mx-auto">
-            Centralized test suite management, lightning-fast test execution, complete defect lifecycle triage, and AI-assisted defect recommendations built for modern engineering teams.
+            DevValidate delivers centralized test management, test case organization, fast test execution, defect lifecycle management, AI-assisted bug intelligence, project quality analytics, and role-based workspaces.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -97,12 +136,12 @@ export const LandingPage: React.FC = () => {
             ) : (
               <>
                 <Link to="/signup" className="w-full sm:w-auto">
-                  <Button size="lg" className="w-full sm:w-auto">
+                  <Button size="lg" className="w-full sm:w-auto bg-primary text-white hover:bg-primary-hover shadow-md">
                     Get Started Free <ArrowRight size={16} />
                   </Button>
                 </Link>
                 <Link to="/login" className="w-full sm:w-auto">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto font-semibold">
                     Sign In to Workspace
                   </Button>
                 </Link>
@@ -117,15 +156,15 @@ export const LandingPage: React.FC = () => {
             {/* Top Workspace Header Preview */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border gap-3">
               <div>
-                <span className="text-xs font-bold text-primary bg-primary-light px-2 py-0.5 rounded">
-                  QA PLATFORM DEMO
+                <span className="text-xs font-bold text-primary bg-primary-light px-2 py-0.5 rounded border border-primary/20">
+                  DEVVALIDATE WORKSPACE
                 </span>
-                <h3 className="text-lg font-bold text-navy-900 mt-1">Checkout & Payments Core</h3>
+                <h3 className="text-lg font-bold text-navy-900 mt-1">Checkout and Payment Score</h3>
                 <p className="text-xs text-secondary">Test execution and defect intelligence at a glance.</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 font-semibold flex items-center gap-1.5">
-                  <CheckCircle2 size={13} /> Regression Sprint 24 Active
+                <span className="text-xs px-2.5 py-1 rounded-md border font-semibold flex items-center gap-1.5 badge-passed">
+                  <CheckCircle2 size={13} /> Regression Sprint 24 — Active
                 </span>
               </div>
             </div>
@@ -149,29 +188,29 @@ export const LandingPage: React.FC = () => {
               </div>
               <div className="bg-soft p-3 rounded-xl border border-border">
                 <span className="text-[11px] font-semibold text-secondary uppercase">Closed</span>
-                <div className="text-2xl font-bold text-navy-900 mt-1">86</div>
+                <div className="text-2xl font-bold text-navy-900 mt-1">10</div>
                 <span className="text-[10px] text-emerald-600 font-medium">Verified fixed</span>
               </div>
             </div>
 
             {/* AI Recommendation Preview Highlight */}
-            <div className="p-4 rounded-xl bg-gradient-to-r from-soft via-primary-light/20 to-soft border border-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-4 rounded-xl bg-soft border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-primary text-white shrink-0 mt-0.5">
                   <Sparkles size={16} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-primary">BUG-00301</span>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.2 rounded-full">
-                      AI Analysis Ready
+                    <span className="text-xs font-bold text-primary">BUG-00421</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border badge-ai-preview">
+                      AI Preview — Demo Data
                     </span>
                   </div>
                   <h4 className="text-xs font-semibold text-navy-900 mt-0.5">
-                    Payment gateway timeout triggers HTTP 500 without retrying idempotency key
+                    Payment gateway timeout during multi-currency settlement
                   </h4>
                   <p className="text-[11px] text-secondary">
-                    Identified: Critical severity · P1 Priority · Duplicate match BUG-00398 (82%)
+                    Illustrative suggestion: Critical severity · P1 Priority · Duplicate match BUG-00398 (82%)
                   </p>
                 </div>
               </div>
@@ -210,7 +249,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div className="p-6 rounded-card border border-border bg-soft/50 hover:border-primary/40 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-xl badge-passed flex items-center justify-center mb-4">
                 <PlayCircle size={20} />
               </div>
               <h4 className="text-sm font-bold text-navy-900 mb-1">Live Test Execution</h4>
@@ -220,7 +259,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div className="p-6 rounded-card border border-border bg-soft/50 hover:border-primary/40 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-xl badge-failed flex items-center justify-center mb-4">
                 <Bug size={20} />
               </div>
               <h4 className="text-sm font-bold text-navy-900 mb-1">Defect Lifecycle Tracking</h4>
@@ -230,7 +269,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div className="p-6 rounded-card border border-border bg-soft/50 hover:border-primary/40 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-xl badge-retest flex items-center justify-center mb-4">
                 <Sparkles size={20} />
               </div>
               <h4 className="text-sm font-bold text-navy-900 mb-1">AI Bug Intelligence</h4>
@@ -240,7 +279,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div className="p-6 rounded-card border border-border bg-soft/50 hover:border-primary/40 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900 flex items-center justify-center mb-4">
                 <BarChart3 size={20} />
               </div>
               <h4 className="text-sm font-bold text-navy-900 mb-1">Quality Analytics & Reports</h4>
@@ -250,8 +289,8 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <div className="p-6 rounded-card border border-border bg-soft/50 hover:border-primary/40 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-navy-900 text-white flex items-center justify-center mb-4">
-                <ShieldAlert size={20} className="text-amber-400" />
+              <div className="w-10 h-10 rounded-xl badge-ai-preview flex items-center justify-center mb-4">
+                <ShieldAlert size={20} />
               </div>
               <h4 className="text-sm font-bold text-navy-900 mb-1">Enterprise RBAC Admin</h4>
               <p className="text-xs text-secondary leading-relaxed">
@@ -288,10 +327,10 @@ export const LandingPage: React.FC = () => {
             <span className="text-[10px] text-secondary mt-0.5">Run test cycle</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 shadow-xs flex flex-col items-center">
+          <div className="p-3 rounded-xl badge-failed border shadow-xs flex flex-col items-center">
             <span className="w-6 h-6 rounded-full bg-rose-600 text-white font-bold flex items-center justify-center text-xs mb-2">3</span>
-            <span className="font-bold text-rose-700">Failed Result</span>
-            <span className="text-[10px] text-rose-600 mt-0.5">Trigger bug</span>
+            <span className="font-bold">Failed Result</span>
+            <span className="text-[10px] opacity-80 mt-0.5">Trigger bug</span>
           </div>
 
           <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex flex-col items-center">
@@ -300,10 +339,10 @@ export const LandingPage: React.FC = () => {
             <span className="text-[10px] text-secondary mt-0.5">Preserve context</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-primary-light/50 border border-primary/20 shadow-xs flex flex-col items-center">
+          <div className="p-3 rounded-xl badge-ai-preview border shadow-xs flex flex-col items-center">
             <span className="w-6 h-6 rounded-full bg-primary text-white font-bold flex items-center justify-center text-xs mb-2">5</span>
-            <span className="font-bold text-primary">AI Analysis</span>
-            <span className="text-[10px] text-primary/80 mt-0.5">Auto-triage</span>
+            <span className="font-bold">AI Preview</span>
+            <span className="text-[10px] opacity-80 mt-0.5">Auto-triage</span>
           </div>
 
           <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex flex-col items-center">
@@ -312,16 +351,16 @@ export const LandingPage: React.FC = () => {
             <span className="text-[10px] text-secondary mt-0.5">Developer PR</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-purple-50 border border-purple-200 shadow-xs flex flex-col items-center">
+          <div className="p-3 rounded-xl badge-retest border shadow-xs flex flex-col items-center">
             <span className="w-6 h-6 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-xs mb-2">7</span>
-            <span className="font-bold text-purple-700">Retest</span>
-            <span className="text-[10px] text-purple-600 mt-0.5">QA verification</span>
+            <span className="font-bold">Retest</span>
+            <span className="text-[10px] opacity-80 mt-0.5">QA verification</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 shadow-xs flex flex-col items-center">
+          <div className="p-3 rounded-xl badge-passed border shadow-xs flex flex-col items-center">
             <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs mb-2">8</span>
-            <span className="font-bold text-emerald-700">Closure</span>
-            <span className="text-[10px] text-emerald-600 mt-0.5">Verified fix</span>
+            <span className="font-bold">Closure</span>
+            <span className="text-[10px] opacity-80 mt-0.5">Verified fix</span>
           </div>
         </div>
       </section>
@@ -401,7 +440,7 @@ export const LandingPage: React.FC = () => {
             </h3>
 
             <p className="mt-3 text-xs sm:text-sm text-secondary leading-relaxed">
-              Dailoqa's defect intelligence engine analyzes failure descriptions, steps, and stack traces to automate the tedious parts of bug triage:
+              DevValidate's defect intelligence engine analyzes failure descriptions, steps, and stack traces to automate the tedious parts of bug triage:
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 text-xs">
@@ -434,23 +473,27 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Final Call to Action */}
-      <section className="py-20 bg-navy-900 text-white px-6 text-center">
+      {/* Final Call to Action Section with Adaptive Theme Contrast */}
+      <section className="py-20 bg-surface border-t border-border px-6 text-center">
         <div className="max-w-2xl mx-auto space-y-6">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Start your QA workflow with Dailoqa today.
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-navy-900">
+            Start your QA workflow with DevValidate today.
           </h2>
-          <p className="text-xs sm:text-sm text-gray-300 max-w-lg mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm text-secondary max-w-lg mx-auto leading-relaxed">
             Experience modern test execution, role-specific workspaces, and AI-assisted defect triage in a single unified platform.
           </p>
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/signup" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white">
+              <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white font-semibold shadow-md">
                 Get Started Free <ArrowRight size={16} />
               </Button>
             </Link>
             <Link to="/login" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-white border-gray-700 hover:bg-navy-800">
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto font-semibold shadow-xs"
+              >
                 Sign In
               </Button>
             </Link>
@@ -465,8 +508,8 @@ export const LandingPage: React.FC = () => {
             <div className="w-6 h-6 rounded-md bg-primary text-white flex items-center justify-center font-bold text-xs">
               <Bug size={14} />
             </div>
-            <span className="font-bold text-navy-900">Dailoqa</span>
-            <span className="text-muted">· AI-Powered QA Test & Bug Intelligence</span>
+            <span className="font-bold text-navy-900">DevValidate</span>
+            <span className="text-muted">· Software Quality Management</span>
           </div>
 
           <div className="flex items-center gap-6">
@@ -477,7 +520,7 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="text-muted">
-            © {new Date().getFullYear()} Dailoqa Technologies Inc. All rights reserved.
+            © 2026 DevValidate. All rights reserved.
           </div>
         </div>
       </footer>

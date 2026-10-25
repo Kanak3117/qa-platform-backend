@@ -3,18 +3,66 @@
 @tailwind utilities;
 
 :root {
-  --background: #f7f8fa;
-  --surface: #ffffff;
-  --border: #e5e7eb;
+  --color-bg: #F7F8FA;
+  --color-surface: #FFFFFF;
+  --color-soft: #F9FAFB;
+  --color-border: #E5E7EB;
+  --color-navy-900: #172033;
+  --color-navy-800: #1E293B;
+  --color-navy-700: #334155;
+  --color-secondary: #6B7280;
+  --color-muted: #9CA3AF;
+  --color-track: #EEF0F3;
+}
+
+html.dark, .dark {
+  --color-bg: #111827;
+  --color-surface: #1F2937;
+  --color-soft: #273449;
+  --color-border: #374151;
+  --color-navy-900: #F9FAFB;
+  --color-navy-800: #E5E7EB;
+  --color-navy-700: #D1D5DB;
+  --color-secondary: #D1D5DB;
+  --color-muted: #9CA3AF;
+  --color-track: #374151;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #f7f8fa;
-  color: #172033;
+  background-color: var(--color-bg);
+  color: var(--color-navy-900);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Global Select & Native Controls Dark Mode Styling */
+select, input, textarea {
+  color-scheme: light;
+}
+
+html.dark select,
+html.dark input,
+html.dark textarea {
+  color-scheme: dark;
+}
+
+select {
+  background-color: var(--color-surface);
+  color: var(--color-navy-900);
+}
+
+html.dark select option {
+  background-color: #1F2937 !important;
+  color: #F9FAFB !important;
+}
+
+html.dark select option:hover,
+html.dark select option:focus,
+html.dark select option:checked {
+  background-color: #273449 !important;
+  color: #818CF8 !important;
 }
 
 /* Custom Scrollbars */
@@ -29,6 +77,90 @@ body {
   background: #cbd5e1;
   border-radius: 3px;
 }
+html.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* DevValidate Exact Badge Tokens (Light: Sec 1 / Dark: Sec 5) */
+.badge-critical, .badge-failed {
+  background-color: #FEE2E2 !important;
+  color: #991B1B !important;
+  border-color: #FECACA !important;
+}
+html.dark .badge-critical, html.dark .badge-failed {
+  background-color: rgba(127, 29, 29, 0.3) !important;
+  color: #FCA5A5 !important;
+  border-color: #991B1B !important;
+}
+
+.badge-high {
+  background-color: #FEF3C7 !important;
+  color: #92400E !important;
+  border-color: #FDE68A !important;
+}
+html.dark .badge-high {
+  background-color: rgba(120, 53, 15, 0.3) !important;
+  color: #FCD34D !important;
+  border-color: #92400E !important;
+}
+
+.badge-medium {
+  background-color: #FEF9C3 !important;
+  color: #854D0E !important;
+  border-color: #FEF08A !important;
+}
+html.dark .badge-medium {
+  background-color: rgba(113, 63, 18, 0.3) !important;
+  color: #FDE047 !important;
+  border-color: #854D0E !important;
+}
+
+.badge-low, .badge-neutral, .badge-closed {
+  background-color: #F3F4F6 !important;
+  color: #374151 !important;
+  border-color: #E5E7EB !important;
+}
+html.dark .badge-low, html.dark .badge-neutral, html.dark .badge-closed {
+  background-color: rgba(55, 65, 81, 0.4) !important;
+  color: #D1D5DB !important;
+  border-color: #4B5563 !important;
+}
+
+.badge-passed, .badge-resolved, .badge-active, .badge-fixed {
+  background-color: #DCFCE7 !important;
+  color: #166534 !important;
+  border-color: #BBF7D0 !important;
+}
+html.dark .badge-passed, html.dark .badge-resolved, html.dark .badge-active, html.dark .badge-fixed {
+  background-color: rgba(20, 83, 45, 0.3) !important;
+  color: #86EFAC !important;
+  border-color: #166534 !important;
+}
+
+.badge-retest, .badge-inprogress {
+  background-color: #EDE9FE !important;
+  color: #5B21B6 !important;
+  border-color: #DDD6FE !important;
+}
+html.dark .badge-retest, html.dark .badge-inprogress {
+  background-color: rgba(76, 29, 149, 0.3) !important;
+  color: #C4B5FD !important;
+  border-color: #5B21B6 !important;
+}
+
+.badge-ai-preview {
+  background-color: #EEF2FF !important;
+  color: #4338CA !important;
+  border-color: #C7D2FE !important;
+}
+html.dark .badge-ai-preview {
+  background-color: rgba(49, 46, 129, 0.3) !important;
+  color: #A5B4FC !important;
+  border-color: #4338CA !important;
 }

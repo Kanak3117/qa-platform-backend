@@ -1,8 +1,10 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AdminRoute } from './components/auth/AdminRoute';
+import { RoleRoute } from './components/auth/RoleRoute';
 import { AppShell } from './components/layout/AppShell';
 import { AdminShell } from './components/admin/AdminShell';
 
@@ -42,56 +44,72 @@ const CatchAllFallback: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/403" element={<Forbidden403 />} />
+      <ThemeProvider>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/403" element={<Forbidden403 />} />
 
-        {/* Protected App Shell for QA & Engineering */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppShell />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/workspace" element={<Overview />} />
-          <Route path="/test-suites" element={<TestSuites />} />
-          <Route path="/test-cases" element={<TestCases />} />
-          <Route path="/test-runs" element={<TestRuns />} />
-          <Route path="/test-execution" element={<TestExecutionPage />} />
-          <Route path="/test-execution/:testCaseId" element={<TestExecutionPage />} />
-          <Route path="/bugs" element={<Bugs />} />
-          <Route path="/bugs/:id" element={<BugDetails />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/qa-workspace" element={<QATesterWorkspace />} />
-          <Route path="/developer-workspace" element={<DeveloperWorkspace />} />
-        </Route>
+          {/* Protected App Shell for QA & Engineering */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/workspace" element={<Overview />} />
+            <Route path="/test-suites" element={<TestSuites />} />
+            <Route path="/test-cases" element={<TestCases />} />
+            <Route path="/test-runs" element={<TestRuns />} />
+            <Route path="/test-execution" element={<TestExecutionPage />} />
+            <Route path="/test-execution/:testCaseId" element={<TestExecutionPage />} />
+            <Route path="/bugs" element={<Bugs />} />
+            <Route path="/bugs/:id" element={<BugDetails />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route
+              path="/qa-workspace"
+              element={
+                <RoleRoute allowedRoles={['QA_ENGINEER']} allowAdmin>
+                  <QATesterWorkspace />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/developer-workspace"
+              element={
+                <RoleRoute allowedRoles={['DEVELOPER']} allowAdmin>
+                  <DeveloperWorkspace />
+                </RoleRoute>
+              }
+            />
+          </Route>
 
-        {/* Protected Admin Console (Guarded: Actual system_role === 'ADMIN' only) */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <AdminRoute>
-                <AdminShell />
-              </AdminRoute>
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/admin" element={<Navigate to="/admin/members" replace />} />
-          <Route path="/admin/members" element={<AdminMembers />} />
-          <Route path="/admin/roles" element={<AdminRoles />} />
-          <Route path="/admin/company" element={<AdminCompany />} />
-          <Route path="/admin/invitations" element={<AdminInvitations />} />
-          <Route path="/admin/audit-log" element={<AdminAuditLog />} />
-        </Route>
+          {/* Protected Admin Console (Guarded: Actual system_role === 'ADMIN' only) */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <AdminShell />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/admin" element={<Navigate to="/admin/members" replace />} />
+            <Route path="/admin/members" element={<AdminMembers />} />
+            <Route path="/admin/roles" element={<AdminRoles />} />
+            <Route path="/admin/company" element={<AdminCompany />} />
+            <Route path="/admin/invitations" element={<AdminInvitations />} />
+            <Route path="/admin/audit-log" element={<AdminAuditLog />} />
+          </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<CatchAllFallback />} />
-      </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<CatchAllFallback />} />
+        </Routes>
+      </ThemeProvider>
     </AuthProvider>
   );
 };

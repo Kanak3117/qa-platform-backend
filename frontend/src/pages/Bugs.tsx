@@ -4,13 +4,16 @@ import { Plus, Search, Filter, AlertCircle } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { SeverityBadge } from '../components/common/SeverityBadge';
+import { PriorityBadge } from '../components/common/PriorityBadge';
 import { CreateBugModal } from '../components/bugs/CreateBugModal';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
 import { Bug } from '../types';
 import { MOCK_USERS } from '../lib/mockData';
 
 export const Bugs: React.FC = () => {
   const navigate = useNavigate();
+  const { currentProject } = useAuth();
   const [bugs, setBugs] = useState<Bug[]>([]);
   const [filteredBugs, setFilteredBugs] = useState<Bug[]>([]);
   const [isLogBugOpen, setIsLogBugOpen] = useState(false);
@@ -19,7 +22,7 @@ export const Bugs: React.FC = () => {
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
 
   const loadData = () => {
-    api.getBugs().then((data) => {
+    api.getBugs(currentProject?.id).then((data) => {
       setBugs(data);
     });
   };
@@ -30,7 +33,7 @@ export const Bugs: React.FC = () => {
       loadData();
     });
     return () => unsub();
-  }, []);
+  }, [currentProject?.id]);
 
   useEffect(() => {
     let result = [...bugs];
@@ -66,9 +69,14 @@ export const Bugs: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-navy-900">Bugs</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-navy-900">Bugs</h1>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary-light text-primary border border-primary/20">
+              {currentProject?.name || 'Active Project'}
+            </span>
+          </div>
           <p className="text-xs text-secondary mt-1">
-            Track, triage and review AI-assisted defects.
+            Track, triage and resolve defects in {currentProject?.name}.
           </p>
         </div>
         <Button onClick={() => setIsLogBugOpen(true)} size="md">
@@ -86,7 +94,7 @@ export const Bugs: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search bug code, title, or category..."
-            className="w-full text-xs bg-soft border border-border rounded-lg pl-9 pr-3 py-2 text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white"
+            className="w-full text-xs bg-soft border border-border rounded-lg pl-9 pr-3 py-2 text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface"
           />
         </div>
 
@@ -141,7 +149,7 @@ export const Bugs: React.FC = () => {
                 <th className="py-3 px-4">Due Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {filteredBugs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-secondary">
@@ -171,9 +179,7 @@ export const Bugs: React.FC = () => {
                       <SeverityBadge severity={bug.severity} size="sm" />
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
-                      <span className="font-semibold text-navy-800 bg-gray-100 px-2 py-0.5 rounded text-[11px]">
-                        {bug.priority}
-                      </span>
+                      <PriorityBadge priority={bug.priority} size="sm" />
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       <StatusBadge status={bug.status} size="sm" />

@@ -11,13 +11,13 @@ import {
   Code2,
   LogOut,
   Layers,
-  ChevronDown,
   ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { ProjectDropdown } from './ProjectDropdown';
 
 export const Sidebar: React.FC = () => {
-  const { user, logout, currentProject, projects, setCurrentProject } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -35,8 +35,12 @@ export const Sidebar: React.FC = () => {
   ];
 
   const roleWorkspaces = [
-    { name: 'QA Tester View', to: '/qa-workspace', icon: FlaskConical },
-    { name: 'Developer View', to: '/developer-workspace', icon: Code2 },
+    ...(user?.system_role === 'ADMIN' || user?.project_role === 'QA_ENGINEER'
+      ? [{ name: 'QA Tester View', to: '/qa-workspace', icon: FlaskConical }]
+      : []),
+    ...(user?.system_role === 'ADMIN' || user?.project_role === 'DEVELOPER'
+      ? [{ name: 'Developer View', to: '/developer-workspace', icon: Code2 }]
+      : []),
   ];
 
   return (
@@ -49,8 +53,8 @@ export const Sidebar: React.FC = () => {
               <Bug size={18} />
             </div>
             <div>
-              <div className="font-bold text-navy-900 text-base leading-tight tracking-tight">Dailoqa</div>
-              <div className="text-xs text-secondary font-medium">QA Workspace</div>
+              <div className="font-bold text-navy-900 text-base leading-tight tracking-tight">DevValidate</div>
+              <div className="text-[11px] text-secondary font-medium">Software Quality Platform</div>
             </div>
           </div>
         </div>
@@ -60,24 +64,7 @@ export const Sidebar: React.FC = () => {
           <div className="text-[11px] font-semibold text-muted uppercase tracking-wider px-2 mb-1.5 flex items-center gap-1.5">
             <Layers size={12} /> Active Project
           </div>
-          <div className="relative group">
-            <select
-              aria-label="Active Project"
-              value={currentProject?.id || ''}
-              onChange={(e) => {
-                const selected = projects.find(p => p.id === e.target.value);
-                if (selected) setCurrentProject(selected);
-              }}
-              className="w-full appearance-none bg-soft hover:bg-gray-100 border border-border text-navy-900 text-xs font-medium rounded-lg px-2.5 py-2 pr-7 cursor-pointer transition-colors focus:outline-none focus:ring-1 focus:ring-primary truncate"
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-2.5 text-secondary pointer-events-none" />
-          </div>
+          <ProjectDropdown variant="sidebar" />
         </div>
 
         {/* Primary Navigation */}
@@ -123,30 +110,32 @@ export const Sidebar: React.FC = () => {
         </nav>
 
         {/* Role Specific Views */}
-        <div className="px-3 py-2 space-y-1">
-          <div className="text-[11px] font-semibold text-muted uppercase tracking-wider px-2 py-1">
-            Workspaces
+        {roleWorkspaces.length > 0 && (
+          <div className="px-3 py-2 space-y-1">
+            <div className="text-[11px] font-semibold text-muted uppercase tracking-wider px-2 py-1">
+              Workspaces
+            </div>
+            {roleWorkspaces.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.name}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-primary-light text-primary font-semibold'
+                        : 'text-secondary hover:text-navy-900 hover:bg-soft'
+                    }`
+                  }
+                >
+                  <Icon size={18} className="shrink-0" />
+                  <span>{item.name}</span>
+                </NavLink>
+              );
+            })}
           </div>
-          {roleWorkspaces.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.name}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-primary-light text-primary font-semibold'
-                      : 'text-secondary hover:text-navy-900 hover:bg-soft'
-                  }`
-                }
-              >
-                <Icon size={18} className="shrink-0" />
-                <span>{item.name}</span>
-              </NavLink>
-            );
-          })}
-        </div>
+        )}
       </div>
 
       {/* User info & Logout at bottom */}
@@ -161,7 +150,13 @@ export const Sidebar: React.FC = () => {
                 {user?.name || 'User'}
               </div>
               <div className="text-[11px] text-secondary truncate">
-                {user?.system_role || 'QA_ENGINEER'}
+                {user?.system_role === 'ADMIN'
+                  ? 'Administrator'
+                  : user?.project_role === 'DEVELOPER'
+                  ? 'Developer Tester'
+                  : user?.project_role === 'QA_ENGINEER'
+                  ? 'QA Tester'
+                  : user?.system_role || 'User'}
               </div>
             </div>
           </div>

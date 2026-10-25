@@ -11,28 +11,28 @@ export const SeverityBadge: React.FC<SeverityBadgeProps> = ({ severity, size = '
     switch (severity) {
       case 'Critical':
         return {
-          bg: 'bg-red-50 text-red-700 border-red-200',
-          dot: 'bg-red-600',
+          badgeClass: 'badge-critical',
+          dot: 'bg-red-600 dark:bg-red-400',
         };
       case 'High':
         return {
-          bg: 'bg-orange-50 text-orange-700 border-orange-200',
-          dot: 'bg-orange-600',
+          badgeClass: 'badge-high',
+          dot: 'bg-amber-600 dark:bg-amber-400',
         };
       case 'Medium':
         return {
-          bg: 'bg-amber-50 text-amber-700 border-amber-200',
-          dot: 'bg-amber-600',
+          badgeClass: 'badge-medium',
+          dot: 'bg-yellow-600 dark:bg-yellow-400',
         };
       case 'Low':
         return {
-          bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-          dot: 'bg-emerald-600',
+          badgeClass: 'badge-low',
+          dot: 'bg-gray-500 dark:bg-gray-400',
         };
       default:
         return {
-          bg: 'bg-slate-50 text-slate-700 border-slate-200',
-          dot: 'bg-slate-500',
+          badgeClass: 'badge-low',
+          dot: 'bg-gray-500 dark:bg-gray-400',
         };
     }
   };
@@ -42,7 +42,7 @@ export const SeverityBadge: React.FC<SeverityBadgeProps> = ({ severity, size = '
 
   return (
     <span
-      className={`inline-flex items-center rounded-md border font-medium ${style.bg} ${sizeClasses}`}
+      className={`inline-flex items-center rounded-md border font-medium ${style.badgeClass} ${sizeClasses}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${style.dot}`}></span>
       {severity}

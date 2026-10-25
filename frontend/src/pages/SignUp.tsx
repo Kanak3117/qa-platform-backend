@@ -45,7 +45,7 @@ export const SignUp: React.FC = () => {
           </Link>
         </div>
         <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-navy-900">
-          Create your Dailoqa account
+          Create your DevValidate account
         </h2>
         <p className="mt-1 text-center text-xs text-secondary">
           Select your engineering role to tailor your workspace experience
@@ -74,7 +74,7 @@ export const SignUp: React.FC = () => {
                   className={`p-3.5 rounded-xl border text-left flex flex-col items-start transition-all ${
                     selectedRole === 'QA_ENGINEER'
                       ? 'border-primary bg-primary-light/50 ring-1 ring-primary'
-                      : 'border-border bg-soft hover:bg-gray-100'
+                      : 'border-border bg-soft hover:bg-border/60'
                   }`}
                 >
                   <FlaskConical
@@ -93,7 +93,7 @@ export const SignUp: React.FC = () => {
                   className={`p-3.5 rounded-xl border text-left flex flex-col items-start transition-all ${
                     selectedRole === 'DEVELOPER'
                       ? 'border-primary bg-primary-light/50 ring-1 ring-primary'
-                      : 'border-border bg-soft hover:bg-gray-100'
+                      : 'border-border bg-soft hover:bg-border/60'
                   }`}
                 >
                   <Code2
@@ -125,7 +125,7 @@ export const SignUp: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
                 required
                 placeholder="Sarah Connor"
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-navy-900"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface text-navy-900"
               />
             </div>
 
@@ -139,7 +139,7 @@ export const SignUp: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="sarah@dailoqa.io"
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-navy-900"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface text-navy-900"
               />
             </div>
 
@@ -153,7 +153,7 @@ export const SignUp: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="At least 6 characters"
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-navy-900"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface text-navy-900"
               />
             </div>
 

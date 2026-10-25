@@ -258,10 +258,10 @@ export const AdminMembers: React.FC = () => {
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${
                           u.system_role === 'ADMIN'
-                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                            : 'bg-gray-100 text-gray-700'
+                            ? 'badge-retest'
+                            : 'badge-low'
                         }`}
                       >
                         {u.system_role}
@@ -346,7 +346,7 @@ export const AdminMembers: React.FC = () => {
               <select
                 value={inviteProjectRole}
                 onChange={(e) => setInviteProjectRole(e.target.value as ProjectRole)}
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="QA_ENGINEER">QA Tester (QA Engineer)</option>
                 <option value="DEVELOPER">Developer</option>
@@ -359,7 +359,7 @@ export const AdminMembers: React.FC = () => {
               <select
                 value={inviteSystemRole}
                 onChange={(e) => setInviteSystemRole(e.target.value as SystemRole)}
-                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option value="USER">Standard User</option>
                 <option value="ADMIN">System Administrator</option>
@@ -395,7 +395,7 @@ export const AdminMembers: React.FC = () => {
             <select
               value={editSystemRole}
               onChange={(e) => setEditSystemRole(e.target.value as SystemRole)}
-              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="USER">Standard User</option>
               <option value="ADMIN">System Administrator</option>
@@ -407,7 +407,7 @@ export const AdminMembers: React.FC = () => {
             <select
               value={editProjectRole}
               onChange={(e) => setEditProjectRole(e.target.value as ProjectRole)}
-              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full text-xs px-3 py-2 border border-border rounded-lg bg-surface text-navy-900 focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="QA_ENGINEER">QA Tester (QA Engineer)</option>
               <option value="DEVELOPER">Developer</option>

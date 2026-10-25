@@ -21,9 +21,9 @@ export const ForgotPassword: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xl shadow-md">
+          <Link to="/" className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-xl shadow-md hover:bg-primary-hover transition-colors">
             <Bug size={26} />
-          </div>
+          </Link>
         </div>
         <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-navy-900">
           Reset your password
@@ -66,7 +66,7 @@ export const ForgotPassword: React.FC = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="name@company.com"
-                    className="w-full text-xs pl-9 pr-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-white text-navy-900"
+                    className="w-full text-xs pl-9 pr-3 py-2 border border-border rounded-lg bg-soft focus:outline-none focus:ring-1 focus:ring-primary focus:bg-surface text-navy-900"
                   />
                 </div>
               </div>
