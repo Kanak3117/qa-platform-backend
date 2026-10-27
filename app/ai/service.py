@@ -9,9 +9,21 @@ from app.ai.duplicates import find_duplicate_suggestions
 from app.ai.schemas import AnalyzeBugRequest, AnalyzeBugResponse, BugCandidate
 
 _CATEGORY_OPTIONS = [
-    "Payment / Checkout", "Authentication", "Performance", "UI / UX",
-    "API / Backend", "Security", "Functional", "Stability", "API",
-    "Data Integrity", "Database", "Integration", "Other", "UI/UX", "API/Backend",
+    "Payment / Checkout",
+    "Authentication",
+    "Performance",
+    "UI / UX",
+    "API / Backend",
+    "Security",
+    "Functional",
+    "Stability",
+    "API",
+    "Data Integrity",
+    "Database",
+    "Integration",
+    "Other",
+    "UI/UX",
+    "API/Backend",
 ]
 _SEVERITY_OPTIONS = ["Critical", "High", "Medium", "Low", "Informational"]
 _PRIORITY_OPTIONS = ["P1", "P2", "P3", "P4"]
@@ -51,16 +63,27 @@ def _call_model(description: str, title: str | None) -> dict:
             detail="AI analysis is not configured (OPENAI_API_KEY is missing).",
         )
 
-    body = json.dumps({
-        "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip(),
-        "messages": [
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user", "content": json.dumps({"reported_title": title, "bug_description": description}, ensure_ascii=False)},
-        ],
-        "response_format": {"type": "json_schema", "json_schema": {"name": "bug_triage", "strict": True, "schema": _OUTPUT_SCHEMA}},
-        "temperature": 0.1,
-        "max_tokens": 350,
-    }).encode("utf-8")
+    body = json.dumps(
+        {
+            "model": os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip(),
+            "messages": [
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        {"reported_title": title, "bug_description": description},
+                        ensure_ascii=False,
+                    ),
+                },
+            ],
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {"name": "bug_triage", "strict": True, "schema": _OUTPUT_SCHEMA},
+            },
+            "temperature": 0.1,
+            "max_tokens": 350,
+        }
+    ).encode("utf-8")
     request = Request(
         os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/") + "/chat/completions",
         data=body,
@@ -75,11 +98,19 @@ def _call_model(description: str, title: str | None) -> dict:
             raise ValueError("empty model response")
         return json.loads(content)
     except HTTPError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"AI provider returned HTTP {exc.code}.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=f"AI provider returned HTTP {exc.code}."
+        ) from exc
     except (URLError, TimeoutError) as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI provider could not be reached; retry later.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI provider could not be reached; retry later.",
+        ) from exc
     except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI provider returned an invalid analysis response.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI provider returned an invalid analysis response.",
+        ) from exc
 
 
 def analyze_bug(
@@ -95,6 +126,9 @@ def analyze_bug(
             ),
         )
     except (TypeError, ValueError) as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI provider returned fields outside the allowed values.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI provider returned fields outside the allowed values.",
+        ) from exc
     result.suggested_title = " ".join(result.suggested_title.split())[:120]
     return result

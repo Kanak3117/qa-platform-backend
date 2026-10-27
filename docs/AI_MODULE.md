@@ -4,6 +4,8 @@
 
 The module provides advisory bug triage with `gpt-4.1-mini` by default, validates the provider's structured response, and ranks likely duplicates with local TF-IDF cosine similarity. The model only receives the reported title and description. Candidate bug text is matched locally and is not sent to the provider. AI output never changes a bug's core title, category, severity, priority, or status automatically.
 
+The bug creation and bug details screens can request live suggestions through the project-scoped `/ai/analyze` endpoint. A QA engineer must choose whether to apply the returned fields. In the current frontend prototype, created bugs and applied suggestions remain in the in-memory demo store and are lost on refresh; the AI routes themselves use persisted project bug records for duplicate candidates. The persisted analysis endpoint below can save suggestions for a database-backed bug without changing that bug's fields.
+
 The project database already defines `Bug` and `BugAIAnalysis` models. AI routes query the `bugs` table by the authenticated project ID and ignore soft-deleted records. Candidate search is capped at the newest 500 project bugs. `POST /api/projects/{project_id}/ai/bugs/{bug_id}/analyze` also saves the advisory suggestions to the bug's `BugAIAnalysis` row, creating or updating the one-to-one record; it does not overwrite the bug itself.
 
 ## Configuration

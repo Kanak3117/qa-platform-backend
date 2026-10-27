@@ -52,7 +52,9 @@ def evaluate_labeled_dataset(
     for case in payload.cases:
         candidates = candidates_by_case.get(case.case_id, [])
         candidate_ids = {candidate.id for candidate in candidates}
-        if case.duplicate_labels_complete and not set(case.expected_duplicate_ids).issubset(candidate_ids):
+        if case.duplicate_labels_complete and not set(case.expected_duplicate_ids).issubset(
+            candidate_ids
+        ):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"case {case.case_id}: expected duplicate IDs must exist in this project's bug database",
@@ -74,7 +76,9 @@ def evaluate_labeled_dataset(
 
         if prediction is not None:
             duplicate_suggestions = prediction.duplicates
-            category_correct = _normalize_category(prediction.category) == _normalize_category(case.expected_category)
+            category_correct = _normalize_category(prediction.category) == _normalize_category(
+                case.expected_category
+            )
             severity_correct = prediction.severity == case.expected_severity
             priority_correct = prediction.priority == case.expected_priority
             pair_correct = severity_correct and priority_correct
@@ -101,33 +105,45 @@ def evaluate_labeled_dataset(
                 recall_at_5 = round(len(set(predicted_ids) & expected_ids) / len(expected_ids), 4)
                 duplicate_recall_values.append(recall_at_5)
 
-        results.append(EvaluationCaseResult(
-            case_id=case.case_id,
-            provider_status=provider_status,
-            provider_error_code=error_code,
-            prediction=prediction,
-            duplicate_suggestions=duplicate_suggestions,
-            category_correct=category_correct,
-            severity_correct=severity_correct,
-            priority_correct=priority_correct,
-            severity_priority_pair_correct=pair_correct,
-            title_accepted=title_accepted,
-            duplicate_precision_at_5=precision_at_5,
-            duplicate_recall_at_5=recall_at_5,
-        ))
+        results.append(
+            EvaluationCaseResult(
+                case_id=case.case_id,
+                provider_status=provider_status,
+                provider_error_code=error_code,
+                prediction=prediction,
+                duplicate_suggestions=duplicate_suggestions,
+                category_correct=category_correct,
+                severity_correct=severity_correct,
+                priority_correct=priority_correct,
+                severity_priority_pair_correct=pair_correct,
+                title_accepted=title_accepted,
+                duplicate_precision_at_5=precision_at_5,
+                duplicate_recall_at_5=recall_at_5,
+            )
+        )
 
     successes = [result for result in results if result.provider_status == "success"]
     model_count = len(successes)
     metrics = EvaluationMetrics(
         provider_success_rate=_rate(model_count, len(payload.cases)) or 0.0,
-        category_accuracy=_rate(sum(result.category_correct is True for result in successes), model_count),
-        severity_accuracy=_rate(sum(result.severity_correct is True for result in successes), model_count),
-        priority_accuracy=_rate(sum(result.priority_correct is True for result in successes), model_count),
+        category_accuracy=_rate(
+            sum(result.category_correct is True for result in successes), model_count
+        ),
+        severity_accuracy=_rate(
+            sum(result.severity_correct is True for result in successes), model_count
+        ),
+        priority_accuracy=_rate(
+            sum(result.priority_correct is True for result in successes), model_count
+        ),
         severity_priority_pair_accuracy=_rate(
             sum(result.severity_priority_pair_correct is True for result in successes), model_count
         ),
-        title_acceptance_rate=_rate(sum(result.title_accepted is True for result in successes), model_count),
-        duplicate_precision_at_5=_rate(sum(duplicate_precision_values), len(duplicate_precision_values)),
+        title_acceptance_rate=_rate(
+            sum(result.title_accepted is True for result in successes), model_count
+        ),
+        duplicate_precision_at_5=_rate(
+            sum(duplicate_precision_values), len(duplicate_precision_values)
+        ),
         duplicate_recall_at_5=_rate(sum(duplicate_recall_values), len(duplicate_recall_values)),
         model_success_denominator=model_count,
         duplicate_precision_denominator=len(duplicate_precision_values),

@@ -9,10 +9,18 @@ from app.ai.schemas import BugCandidate
 class DuplicateSuggestionTests(unittest.TestCase):
     def test_related_bug_ranks_first(self):
         candidates = [
-            BugCandidate(id="1", title="Payment fails", description="Card charged but checkout reports transaction failed"),
-            BugCandidate(id="2", title="Profile image", description="Uploading a new avatar returns an error"),
+            BugCandidate(
+                id="1",
+                title="Payment fails",
+                description="Card charged but checkout reports transaction failed",
+            ),
+            BugCandidate(
+                id="2", title="Profile image", description="Uploading a new avatar returns an error"
+            ),
         ]
-        matches = find_duplicate_suggestions("Checkout transaction fails after card payment is charged", candidates)
+        matches = find_duplicate_suggestions(
+            "Checkout transaction fails after card payment is charged", candidates
+        )
         self.assertTrue(matches)
         self.assertEqual(matches[0].bug_id, "1")
 
@@ -20,8 +28,12 @@ class DuplicateSuggestionTests(unittest.TestCase):
         self.assertEqual(find_duplicate_suggestions("Detailed issue report", []), [])
 
     def test_unrelated_bug_is_filtered(self):
-        candidate = BugCandidate(id="1", title="Avatar upload", description="Profile picture upload is broken")
-        matches = find_duplicate_suggestions("Payment checkout fails after card charge", [candidate])
+        candidate = BugCandidate(
+            id="1", title="Avatar upload", description="Profile picture upload is broken"
+        )
+        matches = find_duplicate_suggestions(
+            "Payment checkout fails after card charge", [candidate]
+        )
         self.assertEqual(matches, [])
 
     def test_supplied_bug_sample_ranks_matching_test_suite_failure_first(self):

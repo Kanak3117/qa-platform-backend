@@ -51,21 +51,15 @@ class Bug(Base):
     test_execution_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("test_executions.id"), nullable=True
     )
-    assignee_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("users.id"), nullable=True
-    )
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     reporter_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    due_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[BugStatus] = mapped_column(
         Enum(BugStatus, name="bug_status", values_callable=lambda obj: [e.value for e in obj]),
-        default=BugStatus.Open
+        default=BugStatus.Open,
     )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -91,24 +85,20 @@ class Bug(Base):
 
 class BugStatusHistory(Base):
     __tablename__ = "bug_status_histories"
-    __table_args__ = (
-        Index("ix_bug_status_histories_bug_id", "bug_id"),
-    )
+    __table_args__ = (Index("ix_bug_status_histories_bug_id", "bug_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     bug_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("bugs.id"))
     old_status: Mapped[BugStatus | None] = mapped_column(
         Enum(BugStatus, name="bug_status", values_callable=lambda obj: [e.value for e in obj]),
-        nullable=True
+        nullable=True,
     )
     new_status: Mapped[BugStatus] = mapped_column(
         Enum(BugStatus, name="bug_status", values_callable=lambda obj: [e.value for e in obj])
     )
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     changed_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    changed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     bug: Mapped["Bug"] = relationship(back_populates="status_history")
     changer: Mapped["User"] = relationship()

@@ -9,7 +9,12 @@ os.environ.setdefault("SECRET_KEY", "test-only-secret")
 
 from fastapi import HTTPException
 
-from app.ai.schemas import AnalyzeBugRequest, AnalyzeBugResponse, BugCandidate, DuplicateSuggestion, EvaluateAIRequest
+from app.ai.schemas import (
+    AnalyzeBugRequest,
+    AnalyzeBugResponse,
+    DuplicateSuggestion,
+    EvaluateAIRequest,
+)
 from app.api.routes.ai import (
     _candidate_models,
     _candidates_by_case,
@@ -89,17 +94,25 @@ class AIDatabaseIntegrationTests(unittest.TestCase):
     def test_evaluation_excludes_source_bug_and_uses_only_project_query_results(self):
         project_id = uuid4()
         source = _bug(project_id, "BUG-1")
-        candidate = _bug(project_id, "BUG-2", description="The password reset email is not delivered.")
-        payload = EvaluateAIRequest.model_validate({"cases": [{
-            "case_id": "BUG-1",
-            "source_bug_code": "BUG-1",
-            "title": "Login action is unresponsive",
-            "description": "The login action is unresponsive with a valid password.",
-            "expected_category": "Authentication",
-            "expected_severity": "High",
-            "expected_priority": "P2",
-            "accepted_titles": ["Login action is unresponsive"],
-        }]})
+        candidate = _bug(
+            project_id, "BUG-2", description="The password reset email is not delivered."
+        )
+        payload = EvaluateAIRequest.model_validate(
+            {
+                "cases": [
+                    {
+                        "case_id": "BUG-1",
+                        "source_bug_code": "BUG-1",
+                        "title": "Login action is unresponsive",
+                        "description": "The login action is unresponsive with a valid password.",
+                        "expected_category": "Authentication",
+                        "expected_severity": "High",
+                        "expected_priority": "P2",
+                        "accepted_titles": ["Login action is unresponsive"],
+                    }
+                ]
+            }
+        )
         db = _FakeDB(rows=[source, candidate])
 
         candidates = _candidates_by_case(payload, db, project_id)
@@ -117,7 +130,9 @@ class AIDatabaseIntegrationTests(unittest.TestCase):
         )
         expected = AnalyzeBugResponse(
             suggested_title="Login button gives no response",
-            category="Authentication", severity="High", priority="P2",
+            category="Authentication",
+            severity="High",
+            priority="P2",
             rationale="The login action does not respond.",
             duplicates=[DuplicateSuggestion(bug_id="BUG-2", title=candidate.title, similarity=0.7)],
         )
@@ -134,9 +149,13 @@ class AIDatabaseIntegrationTests(unittest.TestCase):
         db = _FakeDB(scalar_rows=[bug, None])
         prediction = AnalyzeBugResponse(
             suggested_title="Login button fails to respond",
-            category="Authentication", severity="High", priority="P2",
+            category="Authentication",
+            severity="High",
+            priority="P2",
             rationale="The login action is not responding.",
-            duplicates=[DuplicateSuggestion(bug_id="BUG-2", title="Similar login issue", similarity=0.8)],
+            duplicates=[
+                DuplicateSuggestion(bug_id="BUG-2", title="Similar login issue", similarity=0.8)
+            ],
         )
         original_title = bug.title
         with patch("app.api.routes.ai.analyze_bug", return_value=prediction):

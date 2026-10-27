@@ -51,7 +51,9 @@ def _candidates_by_case(payload: EvaluateAIRequest, db: Session, project_id: UUI
     result = {}
     for case in payload.cases:
         exclude_code = case.source_bug_code or case.case_id
-        result[case.case_id] = [candidate for candidate in all_candidates if candidate.id != exclude_code]
+        result[case.case_id] = [
+            candidate for candidate in all_candidates if candidate.id != exclude_code
+        ]
         if case.duplicate_labels_complete:
             missing = set(case.expected_duplicate_ids) - set(by_id)
             if missing:
@@ -87,13 +89,17 @@ def analyze_persisted_bug_endpoint(
     db: Session = Depends(get_db),
 ) -> PersistedBugAnalysisResponse:
     """Analyze a stored project bug, save the advisory result, and return it."""
-    bug = db.scalar(select(Bug).where(
-        Bug.id == bug_id,
-        Bug.project_id == project_id,
-        Bug.is_deleted.is_(False),
-    ))
+    bug = db.scalar(
+        select(Bug).where(
+            Bug.id == bug_id,
+            Bug.project_id == project_id,
+            Bug.is_deleted.is_(False),
+        )
+    )
     if bug is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bug not found in this project")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Bug not found in this project"
+        )
 
     description = "\n".join(part for part in [bug.title, bug.description or ""] if part).strip()
     payload = AnalyzeBugRequest(title=bug.title, description=description)

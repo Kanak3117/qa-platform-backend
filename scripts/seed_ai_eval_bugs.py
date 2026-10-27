@@ -1,4 +1,5 @@
 """Import the supplied sample bug CSV into a non-production project for AI smoke tests."""
+
 import argparse
 import csv
 import sys
@@ -18,7 +19,9 @@ DEFAULT_CSV = ROOT / "docs" / "ai_evaluation_bug_records.csv"
 PRIORITY_MAP = {"Critical": "P1", "High": "P2", "Medium": "P3", "Low": "P4"}
 
 
-def import_rows(project_id: UUID, reporter_id: UUID, csv_path: Path, *, dry_run: bool = False) -> tuple[int, int]:
+def import_rows(
+    project_id: UUID, reporter_id: UUID, csv_path: Path, *, dry_run: bool = False
+) -> tuple[int, int]:
     with SessionLocal() as db:
         project = db.get(Project, project_id)
         reporter = db.get(User, reporter_id)
@@ -46,18 +49,20 @@ def import_rows(project_id: UUID, reporter_id: UUID, csv_path: Path, *, dry_run:
                 continue
             severity = BugSeverity(row["severity"].strip())
             priority = PRIORITY_MAP[row["priority"].strip()]
-            db.add(Bug(
-                bug_code=bug_code,
-                title=row["title"].strip(),
-                description=row["description"].strip(),
-                category=row["category"].strip(),
-                severity=severity,
-                priority=priority,
-                project_id=project_id,
-                reporter_id=reporter_id,
-                status=BugStatus.Open,
-                is_deleted=False,
-            ))
+            db.add(
+                Bug(
+                    bug_code=bug_code,
+                    title=row["title"].strip(),
+                    description=row["description"].strip(),
+                    category=row["category"].strip(),
+                    severity=severity,
+                    priority=priority,
+                    project_id=project_id,
+                    reporter_id=reporter_id,
+                    status=BugStatus.Open,
+                    is_deleted=False,
+                )
+            )
             inserted += 1
         if dry_run:
             db.rollback()
@@ -71,9 +76,13 @@ def main() -> None:
     parser.add_argument("--project-id", required=True, type=UUID)
     parser.add_argument("--reporter-id", required=True, type=UUID)
     parser.add_argument("--csv", type=Path, default=DEFAULT_CSV)
-    parser.add_argument("--dry-run", action="store_true", help="validate and count rows without saving")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="validate and count rows without saving"
+    )
     args = parser.parse_args()
-    inserted, skipped = import_rows(args.project_id, args.reporter_id, args.csv, dry_run=args.dry_run)
+    inserted, skipped = import_rows(
+        args.project_id, args.reporter_id, args.csv, dry_run=args.dry_run
+    )
     action = "would insert" if args.dry_run else "inserted"
     print(f"{action} {inserted} sample bugs; skipped {skipped} existing bug codes")
 
