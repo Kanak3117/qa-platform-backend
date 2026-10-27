@@ -5,7 +5,33 @@ from collections import Counter
 from app.ai.schemas import BugCandidate, DuplicateSuggestion
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
-_STOP_WORDS = {"a", "an", "and", "are", "as", "at", "be", "been", "by", "can", "for", "from", "in", "is", "it", "of", "on", "or", "that", "the", "this", "to", "was", "when", "with"}
+_STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "by",
+    "can",
+    "for",
+    "from",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "this",
+    "to",
+    "was",
+    "when",
+    "with",
+}
 
 
 def _tokens(text: str) -> list[str]:
@@ -14,7 +40,10 @@ def _tokens(text: str) -> list[str]:
 
 def _vector(tokens: list[str], document_frequency: Counter[str], count: int) -> dict[str, float]:
     term_frequency = Counter(tokens)
-    vector = {term: (1 + math.log(freq)) * (math.log((1 + count) / (1 + document_frequency[term])) + 1) for term, freq in term_frequency.items()}
+    vector = {
+        term: (1 + math.log(freq)) * (math.log((1 + count) / (1 + document_frequency[term])) + 1)
+        for term, freq in term_frequency.items()
+    }
     norm = math.sqrt(sum(value * value for value in vector.values()))
     return {term: value / norm for term, value in vector.items()} if norm else {}
 
@@ -41,5 +70,11 @@ def find_duplicate_suggestions(
     for candidate, vector in zip(candidates, vectors[1:]):
         similarity = sum(value * vector.get(term, 0.0) for term, value in query_vector.items())
         if similarity >= threshold:
-            matches.append(DuplicateSuggestion(bug_id=candidate.id, title=candidate.title, similarity=round(min(similarity, 1.0), 4)))
+            matches.append(
+                DuplicateSuggestion(
+                    bug_id=candidate.id,
+                    title=candidate.title,
+                    similarity=round(min(similarity, 1.0), 4),
+                )
+            )
     return sorted(matches, key=lambda item: item.similarity, reverse=True)[:limit]

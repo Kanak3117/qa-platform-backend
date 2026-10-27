@@ -35,8 +35,14 @@ def _case(case_id, **overrides):
     return case
 
 
-def _prediction(*, category="API / Backend", severity="High", priority="P2",
-                title="Checkout fails after payment", duplicates=None):
+def _prediction(
+    *,
+    category="API / Backend",
+    severity="High",
+    priority="P2",
+    title="Checkout fails after payment",
+    duplicates=None,
+):
     return AnalyzeBugResponse(
         suggested_title=title,
         category=category,
@@ -56,37 +62,46 @@ class AIEvaluationTests(unittest.TestCase):
 
     def test_reports_live_metrics_and_denominators(self):
         candidate = BugCandidate(
-            id="BUG-1", title="Card charged but order does not appear",
+            id="BUG-1",
+            title="Card charged but order does not appear",
             description="Payment is captured but checkout creates no order.",
         )
-        payload = EvaluateAIRequest.model_validate({
-            "dataset_name": "reviewed-bug-set",
-            "cases": [
-                _case(
-                    "PAY-1", expected_category="UI / UX",
-                    duplicate_labels_complete=True, expected_duplicate_ids=["BUG-1"],
-                ),
-                _case(
-                    "SEC-1", expected_category="Security",
-                    expected_severity="Critical", expected_priority="P1",
-                    accepted_titles=["Unauthorized customer data exposed"],
-                ),
-            ],
-        })
+        payload = EvaluateAIRequest.model_validate(
+            {
+                "dataset_name": "reviewed-bug-set",
+                "cases": [
+                    _case(
+                        "PAY-1",
+                        expected_category="UI / UX",
+                        duplicate_labels_complete=True,
+                        expected_duplicate_ids=["BUG-1"],
+                    ),
+                    _case(
+                        "SEC-1",
+                        expected_category="Security",
+                        expected_severity="Critical",
+                        expected_priority="P1",
+                        accepted_titles=["Unauthorized customer data exposed"],
+                    ),
+                ],
+            }
+        )
         predictions = [
-            _prediction(duplicates=[
-                DuplicateSuggestion(bug_id="BUG-1", title=candidate.title, similarity=0.81)
-            ]),
             _prediction(
-                category="Security", severity="Critical", priority="P1",
+                duplicates=[
+                    DuplicateSuggestion(bug_id="BUG-1", title=candidate.title, similarity=0.81)
+                ]
+            ),
+            _prediction(
+                category="Security",
+                severity="Critical",
+                priority="P1",
                 title="Account data exposed",
             ),
         ]
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             with patch("app.ai.evaluation.analyze_bug", side_effect=predictions):
-                result = evaluate_labeled_dataset(
-                    payload, {"PAY-1": [candidate], "SEC-1": []}
-                )
+                result = evaluate_labeled_dataset(payload, {"PAY-1": [candidate], "SEC-1": []})
 
         self.assertEqual(result.sample_count, 2)
         self.assertEqual(result.provider_success_count, 2)
@@ -113,12 +128,19 @@ class AIEvaluationTests(unittest.TestCase):
 
     def test_provider_failure_is_counted_and_local_duplicate_score_remains_available(self):
         candidate = BugCandidate(
-            id="BUG-77", title="Checkout payment failure after card charge",
+            id="BUG-77",
+            title="Checkout payment failure after card charge",
             description="Checkout fails after the card is charged and no order appears.",
         )
-        payload = EvaluateAIRequest.model_validate({"cases": [_case(
-            "PAY-77", duplicate_labels_complete=True, expected_duplicate_ids=["BUG-77"]
-        )]})
+        payload = EvaluateAIRequest.model_validate(
+            {
+                "cases": [
+                    _case(
+                        "PAY-77", duplicate_labels_complete=True, expected_duplicate_ids=["BUG-77"]
+                    )
+                ]
+            }
+        )
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             with patch(
                 "app.ai.evaluation.analyze_bug",
@@ -134,9 +156,15 @@ class AIEvaluationTests(unittest.TestCase):
         self.assertEqual(result.results[0].duplicate_suggestions[0].bug_id, "BUG-77")
 
     def test_missing_duplicate_code_is_rejected_for_project_database(self):
-        payload = EvaluateAIRequest.model_validate({"cases": [_case(
-            "PAY-77", duplicate_labels_complete=True, expected_duplicate_ids=["MISSING"]
-        )]})
+        payload = EvaluateAIRequest.model_validate(
+            {
+                "cases": [
+                    _case(
+                        "PAY-77", duplicate_labels_complete=True, expected_duplicate_ids=["MISSING"]
+                    )
+                ]
+            }
+        )
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             with self.assertRaises(HTTPException) as raised:
                 evaluate_labeled_dataset(payload, {"PAY-77": []})
@@ -152,24 +180,24 @@ class AIEvaluationTests(unittest.TestCase):
         analyze.assert_not_called()
 
     def test_project_dataset_labels_match_supplied_bug_taxonomy(self):
-        case = LabeledEvaluationCase.model_validate(_case(
-            "BUG-003", expected_category="Stability", expected_severity="Critical",
-            expected_priority="P2",
-        ))
+        case = LabeledEvaluationCase.model_validate(
+            _case(
+                "BUG-003",
+                expected_category="Stability",
+                expected_severity="Critical",
+                expected_priority="P2",
+            )
+        )
         self.assertEqual(case.expected_category, "Stability")
         self.assertEqual(case.expected_priority, "P2")
 
     def test_duplicate_ids_require_complete_human_labels(self):
         with self.assertRaises(ValidationError):
-            LabeledEvaluationCase.model_validate(_case(
-                "BAD-1", expected_duplicate_ids=["BUG-1"]
-            ))
+            LabeledEvaluationCase.model_validate(_case("BAD-1", expected_duplicate_ids=["BUG-1"]))
 
     def test_dataset_is_limited_to_ten_cases(self):
         with self.assertRaises(ValidationError):
-            EvaluateAIRequest.model_validate({
-                "cases": [_case(f"CASE-{i}") for i in range(11)]
-            })
+            EvaluateAIRequest.model_validate({"cases": [_case(f"CASE-{i}") for i in range(11)]})
 
 
 if __name__ == "__main__":

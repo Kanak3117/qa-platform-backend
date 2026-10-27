@@ -3,7 +3,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
-import { Bug, BugSeverity, TestCase, User } from '../../types';
+import { Bug, BugAnalysisSuggestion, BugSeverity, TestCase, User } from '../../types';
 import { MOCK_USERS } from '../../lib/mockData';
 
 interface CreateBugModalProps {
@@ -34,10 +34,15 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
   const [assigneeId, setAssigneeId] = useState<string>('');
   const [dueDate, setDueDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<BugAnalysisSuggestion | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
+      setAiAnalysis(null);
+      setAiError(null);
       api.getTestCases().then((cases) => {
         setTestCases(cases);
         if (initialTestCaseId) {
@@ -51,6 +56,36 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
       if (initialTestCaseId) setTestCaseId(initialTestCaseId);
     }
   }, [isOpen, initialTestCaseId]);
+
+  const handleAnalyzeAI = async () => {
+    if (!currentProject) {
+      setAiError('Select a project before requesting AI analysis.');
+      return;
+    }
+    if (description.trim().length < 10) {
+      setAiError('Enter at least 10 characters in the description before requesting analysis.');
+      return;
+    }
+
+    setIsAnalyzingAI(true);
+    setAiError(null);
+    try {
+      const result = await api.analyzeBug(currentProject.id, title, description);
+      setAiAnalysis(result);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI analysis failed.');
+    } finally {
+      setIsAnalyzingAI(false);
+    }
+  };
+
+  const applyAISuggestions = () => {
+    if (!aiAnalysis) return;
+    setTitle(aiAnalysis.suggested_title);
+    setCategory(aiAnalysis.category);
+    setSeverity(aiAnalysis.severity);
+    setPriority(aiAnalysis.priority);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +117,8 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
       // Reset fields
       setTitle('');
       setDescription('');
+      setAiAnalysis(null);
+      setAiError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to create bug');
     } finally {
@@ -103,7 +140,10 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
           <input
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              setAiAnalysis(null);
+            }}
             placeholder="e.g. Checkout fails on expired card with unhandled exception"
             className="w-full text-xs px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
             required
@@ -124,6 +164,12 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
               <option value="UI / UX">UI / UX</option>
               <option value="API / Backend">API / Backend</option>
               <option value="Security">Security</option>
+              <option value="Functional">Functional</option>
+              <option value="Stability">Stability</option>
+              <option value="Data Integrity">Data Integrity</option>
+              <option value="Database">Database</option>
+              <option value="Integration">Integration</option>
+              <option value="Other">Other</option>
             </select>
           </div>
 
@@ -206,10 +252,55 @@ export const CreateBugModal: React.FC<CreateBugModalProps> = ({
           <textarea
             rows={4}
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              setAiAnalysis(null);
+            }}
             placeholder="Detailed description of defect, steps to reproduce, actual vs expected result..."
             className="w-full text-xs px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
           />
+        </div>
+
+        <div className="rounded-lg border border-primary/20 bg-primary-light/20 p-3 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-secondary">
+              AI can suggest triage fields and likely duplicates from this project’s bug database.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleAnalyzeAI}
+              isLoading={isAnalyzingAI}
+              disabled={!currentProject || description.trim().length < 10}
+            >
+              Analyze with AI
+            </Button>
+          </div>
+          {aiError && <p role="alert" className="text-xs text-red-700">{aiError}</p>}
+          {aiAnalysis && (
+            <div className="space-y-2 text-xs">
+              <p className="font-medium text-navy-900">
+                {aiAnalysis.suggested_title} · {aiAnalysis.category} · {aiAnalysis.severity} · {aiAnalysis.priority}
+              </p>
+              <p className="text-secondary">{aiAnalysis.rationale}</p>
+              {aiAnalysis.duplicates.length > 0 && (
+                <ul className="list-disc pl-5 text-secondary">
+                  {aiAnalysis.duplicates.map((match) => (
+                    <li key={match.bug_id}>
+                      {match.bug_id}: {match.title} ({Math.round(match.similarity * 100)}% lexical similarity)
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-muted">Advisory only. Review before applying.</span>
+                <Button type="button" size="sm" variant="secondary" onClick={applyAISuggestions}>
+                  Apply suggestions
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="pt-3 border-t border-border flex justify-end gap-2">

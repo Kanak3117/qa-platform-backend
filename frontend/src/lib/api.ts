@@ -10,7 +10,7 @@ import {
   BugStatusHistory,
   Comment,
   Attachment,
-  BugAIAnalysis,
+  BugAnalysisSuggestion,
   Notification,
   BugStatus,
   Invitation,
@@ -28,7 +28,6 @@ import {
   MOCK_TEST_RUNS,
   MOCK_EXECUTIONS,
   MOCK_BUGS,
-  MOCK_AI_ANALYSIS,
   MOCK_STATUS_HISTORIES,
   MOCK_COMMENTS,
   MOCK_ATTACHMENTS,
@@ -700,9 +699,35 @@ class ApiService {
     return { ...this.bugs[bugIndex] };
   }
 
-  // BUG AI ANALYSIS
-  async getBugAIAnalysis(bugId: string): Promise<BugAIAnalysis | null> {
-    return MOCK_AI_ANALYSIS[bugId] || null;
+  // AI BUG TRIAGE
+  async analyzeBug(
+    projectId: string,
+    title: string,
+    description: string,
+  ): Promise<BugAnalysisSuggestion> {
+    if (!this.token || this.token.startsWith('mock-jwt-token-')) {
+      throw new Error('Sign in to the live API to use AI bug analysis.');
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/projects/${encodeURIComponent(projectId)}/ai/analyze`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ title, description }),
+      },
+    );
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const detail = payload?.detail;
+      throw new Error(
+        typeof detail === 'string'
+          ? detail
+          : `AI analysis failed (HTTP ${response.status}).`,
+      );
+    }
+
+    return payload as BugAnalysisSuggestion;
   }
 
   // BUG STATUS HISTORIES

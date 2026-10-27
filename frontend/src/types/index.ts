@@ -130,6 +130,21 @@ export interface BugAIAnalysis {
   duplicate_bug_ids: string[];
 }
 
+export interface BugAnalysisSuggestion {
+  suggested_title: string;
+  category: string;
+  severity: BugSeverity;
+  priority: string;
+  rationale: string;
+  duplicates: Array<{
+    bug_id: string;
+    title: string;
+    similarity: number;
+  }>;
+  duplicate_method: 'tfidf_cosine';
+  requires_qa_review: true;
+}
+
 export interface Notification {
   id: string;
   user_id: string;

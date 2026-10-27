@@ -22,7 +22,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import {
   Bug,
-  BugAIAnalysis,
+  BugAnalysisSuggestion,
   BugStatusHistory,
   Comment,
   Attachment,
@@ -34,10 +34,11 @@ import { MOCK_USERS } from '../lib/mockData';
 export const BugDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, currentProject } = useAuth();
 
   const [bug, setBug] = useState<Bug | null>(null);
-  const [aiAnalysis, setAiAnalysis] = useState<BugAIAnalysis | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<BugAnalysisSuggestion | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [histories, setHistories] = useState<BugStatusHistory[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -46,6 +47,7 @@ export const BugDetails: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [aiApplied, setAiApplied] = useState(false);
 
   useEffect(() => {
@@ -65,14 +67,12 @@ export const BugDetails: React.FC = () => {
     }
     setBug(fetchedBug);
 
-    const [ai, hists, comms, atts] = await Promise.all([
-      api.getBugAIAnalysis(fetchedBug.id),
+    const [hists, comms, atts] = await Promise.all([
       api.getBugStatusHistories(fetchedBug.id),
       api.getComments(fetchedBug.id),
       api.getAttachments(fetchedBug.id),
     ]);
 
-    setAiAnalysis(ai);
     setHistories(hists);
     setComments(comms);
     setAttachments(atts);
@@ -116,13 +116,39 @@ export const BugDetails: React.FC = () => {
     setAttachments((prev) => [...prev, att]);
   };
 
+  const handleAnalyzeAI = async () => {
+    if (!bug || !currentProject) {
+      setAiError('Select a project before requesting AI analysis.');
+      return;
+    }
+    if (bug.description.trim().length < 10) {
+      setAiError('Add at least 10 characters of description before requesting analysis.');
+      return;
+    }
+
+    setIsAnalyzingAI(true);
+    setAiError(null);
+    try {
+      const result = await api.analyzeBug(
+        currentProject.id,
+        bug.title,
+        bug.description,
+      );
+      setAiAnalysis(result);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI analysis failed.');
+    } finally {
+      setIsAnalyzingAI(false);
+    }
+  };
+
   const handleApplyAI = async () => {
     if (!bug || !aiAnalysis) return;
     const updated = await api.updateBug(bug.id, {
       title: aiAnalysis.suggested_title,
-      category: aiAnalysis.suggested_category,
-      severity: aiAnalysis.suggested_severity,
-      priority: aiAnalysis.suggested_priority,
+      category: aiAnalysis.category,
+      severity: aiAnalysis.severity,
+      priority: aiAnalysis.priority,
     });
     setBug(updated);
     setAiApplied(true);
@@ -319,41 +345,59 @@ export const BugDetails: React.FC = () => {
           </div>
 
           {/* Section 2: AI Bug Intelligence */}
-          {aiAnalysis && (
-            <div className="bg-surface rounded-card border border-primary/30 p-5 shadow-xs relative overflow-hidden">
-              <div className="flex items-center justify-between pb-3 border-b border-primary/20">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-primary-light text-primary">
-                    <Sparkles size={16} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-navy-900">AI Bug Intelligence</h3>
-                    <p className="text-[11px] text-secondary">
-                      Automated classification & duplicate detection
-                    </p>
-                  </div>
+          <div className="bg-surface rounded-card border border-primary/30 p-5 shadow-xs relative overflow-hidden">
+            <div className="flex items-center justify-between pb-3 border-b border-primary/20">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-primary-light text-primary">
+                  <Sparkles size={16} />
                 </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-navy-900">AI Bug Intelligence</h3>
+                  <p className="text-[11px] text-secondary">
+                    Live triage suggestions and project bug similarity matches
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={handleApplyAI}
-                  disabled={aiApplied}
-                  className="text-xs"
+                  onClick={handleAnalyzeAI}
+                  isLoading={isAnalyzingAI}
                 >
-                  {aiApplied ? (
-                    <>
-                      <Check size={14} className="text-emerald-600" /> Suggestions Applied
-                    </>
-                  ) : (
-                    'Apply Suggestions'
-                  )}
+                  Analyze with AI
                 </Button>
+                {aiAnalysis && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleApplyAI}
+                    disabled={aiApplied}
+                    className="text-xs"
+                  >
+                    {aiApplied ? (
+                      <>
+                        <Check size={14} className="text-emerald-600" /> Suggestions Applied
+                      </>
+                    ) : (
+                      'Apply Suggestions'
+                    )}
+                  </Button>
+                )}
               </div>
+            </div>
 
+            {aiError && (
+              <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                {aiError}
+              </p>
+            )}
+
+            {aiAnalysis ? (
               <div className="mt-4 space-y-3 text-xs">
                 <div className="p-3 rounded-lg bg-primary-light/30 border border-primary/20">
                   <span className="text-[11px] font-semibold text-primary uppercase tracking-wider block mb-1">
-                    AI Suggested Refinement
+                    Suggested title
                   </span>
                   <div className="font-medium text-navy-900">{aiAnalysis.suggested_title}</div>
                 </div>
@@ -361,31 +405,43 @@ export const BugDetails: React.FC = () => {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="p-2.5 rounded-lg bg-soft border border-border">
                     <span className="text-[11px] text-muted block">Suggested Category</span>
-                    <span className="font-semibold text-navy-900">{aiAnalysis.suggested_category}</span>
+                    <span className="font-semibold text-navy-900">{aiAnalysis.category}</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-soft border border-border">
                     <span className="text-[11px] text-muted block">Suggested Severity</span>
-                    <span className="font-semibold text-red-600">{aiAnalysis.suggested_severity}</span>
+                    <span className="font-semibold text-red-600">{aiAnalysis.severity}</span>
                   </div>
                   <div className="p-2.5 rounded-lg bg-soft border border-border">
                     <span className="text-[11px] text-muted block">Suggested Priority</span>
-                    <span className="font-semibold text-navy-900">{aiAnalysis.suggested_priority}</span>
+                    <span className="font-semibold text-navy-900">{aiAnalysis.priority}</span>
                   </div>
                 </div>
+                <p className="text-secondary">{aiAnalysis.rationale}</p>
 
-                {aiAnalysis.duplicate_bug_ids.length > 0 && (
+                {aiAnalysis.duplicates.length > 0 && (
                   <div className="p-3 rounded-lg bg-amber-50/60 border border-amber-200">
                     <div className="flex items-center gap-1.5 text-amber-800 font-semibold mb-1">
-                      <AlertCircle size={14} /> Potential Duplicate Match
+                      <AlertCircle size={14} /> Potential duplicate matches
                     </div>
-                    <div className="text-secondary text-[11px]">
-                      {aiAnalysis.duplicate_bug_ids.join(', ')} shares semantic failure patterns with this report.
-                    </div>
+                    <ul className="list-disc pl-5 text-secondary text-[11px]">
+                      {aiAnalysis.duplicates.map((match) => (
+                        <li key={match.bug_id}>
+                          {match.bug_id}: {match.title} ({Math.round(match.similarity * 100)}% lexical similarity)
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
+                <p className="text-[11px] text-muted">
+                  Advisory only. Review every suggestion before applying it. Duplicate matching uses TF-IDF text similarity.
+                </p>
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="mt-4 text-xs text-secondary">
+                Request an analysis to get title, category, severity, priority, and duplicate suggestions from the configured AI service.
+              </p>
+            )}
+          </div>
 
           {/* Section 3: Comments & Activity */}
           <div className="bg-surface rounded-card border border-border p-5 shadow-xs">

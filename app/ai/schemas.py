@@ -7,10 +7,21 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # These values align with the app's bug form and the supplied QA sample while
 # keeping the previous AI route labels accepted for compatibility.
 Category = Literal[
-    "Payment / Checkout", "Authentication", "Performance", "UI / UX",
-    "API / Backend", "Security", "Functional", "Stability", "API",
-    "Data Integrity", "Database", "Integration", "Other",
-    "UI/UX", "API/Backend",
+    "Payment / Checkout",
+    "Authentication",
+    "Performance",
+    "UI / UX",
+    "API / Backend",
+    "Security",
+    "Functional",
+    "Stability",
+    "API",
+    "Data Integrity",
+    "Database",
+    "Integration",
+    "Other",
+    "UI/UX",
+    "API/Backend",
 ]
 Severity = Literal["Critical", "High", "Medium", "Low", "Informational"]
 Priority = Literal["P1", "P2", "P3", "P4"]
@@ -143,7 +154,9 @@ class LabeledEvaluationCase(BaseModel):
     @model_validator(mode="after")
     def validate_duplicate_label_state(self):
         if self.expected_duplicate_ids and not self.duplicate_labels_complete:
-            raise ValueError("mark duplicate_labels_complete true when supplying reviewed duplicate IDs")
+            raise ValueError(
+                "mark duplicate_labels_complete true when supplying reviewed duplicate IDs"
+            )
         return self
 
 

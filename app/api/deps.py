@@ -1,16 +1,15 @@
 import uuid
 from collections.abc import Callable
 
-from sqlalchemy import select
-
-from app.models.project import Project, ProjectMember, ProjectRole
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_access_token
+from app.models.project import Project, ProjectMember, ProjectRole
 from app.models.user import SystemRole, User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")

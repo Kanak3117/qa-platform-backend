@@ -202,8 +202,8 @@ export const Bugs: React.FC = () => {
       <CreateBugModal
         isOpen={isLogBugOpen}
         onClose={() => setIsLogBugOpen(false)}
-        onSuccess={(newBug) => {
-          setBugs((prev) => [newBug, ...prev]);
+        onSuccess={() => {
+          void loadData();
         }}
       />
     </div>

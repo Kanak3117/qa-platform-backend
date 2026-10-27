@@ -1,238 +1,71 @@
-# \# AI-Powered QA Test \& Bug Intelligence Platform: Backend
+# Dailoqa QA Platform
 
-# 
+Dailoqa is a QA platform prototype with a FastAPI and PostgreSQL backend and a React/TypeScript frontend. The backend includes authentication, project membership and roles, QA data models and migrations, and AI-assisted bug triage.
 
-# Backend for the QA Test \& Bug Intelligence Platform, built with FastAPI and PostgreSQL.
+## Member 4: AI bug triage
 
-# 
+The AI service uses `gpt-4.1-mini` by default (configurable with `OPENAI_MODEL`) to suggest a concise title, category, severity, priority, and rationale. It validates structured model output and returns provider errors as API responses. Suggestions are advisory and require QA review.
 
-# Currently implemented: authentication, users, projects and project members. Test management, bug tracking and AI analysis are being added by the team.
+Duplicate suggestions use local TF-IDF cosine similarity against up to 500 newest, non-deleted bugs from the authorized project. Candidate bug descriptions are not sent to the model. The frontend's bug creation and bug details screens can request live analysis from the backend when signed in with a configured API and project. Applying suggestions in the current frontend updates its in-memory demo state.
 
-# 
+See [`docs/AI_MODULE.md`](docs/AI_MODULE.md) for endpoints, evaluation, seed data, verification steps, and limitations.
 
-# \## Tech stack
+## Stack
 
-# 
+- Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16
+- React 18, TypeScript (strict mode), Vite, Tailwind CSS
+- OpenAI Chat Completions API with structured JSON output
 
-# \- Python 3.10+ (developed on 3.14), FastAPI, Uvicorn
+## Run the backend and database
 
-# \- PostgreSQL, SQLAlchemy 2, Alembic (migrations)
+1. Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD` and a private random `SECRET_KEY`. Set `OPENAI_API_KEY` to enable live AI analysis. Never commit `.env` or expose API keys.
+2. Start the database and API. The API container applies Alembic migrations before starting:
 
-# \- JWT authentication (PyJWT), bcrypt password hashing
+   ```sh
+   docker compose up --build
+   ```
 
-# 
+3. Open the API documentation at <http://localhost:8000/docs>.
 
-# \## Setup
+For local Python development without Docker, install dependencies with `python -m pip install -r requirements.txt`, configure `DATABASE_URL` in `.env`, run `alembic upgrade head`, then start `uvicorn app.main:app --reload`.
 
-# 
+## Run the frontend
 
-# 1\. Clone the repo and enter the folder:
+In another terminal:
 
-# 
+```sh
+cd frontend
+cp .env.example .env
+npm ci
+npm run dev
+```
 
-# ```
+The example frontend API URL is `http://localhost:8000`. Sign in with a backend user who belongs to an active project to use live AI analysis. A configured provider key is required. The other bug, suite, case, run, and execution workflows still use in-memory demo data; refreshing the page resets those demo changes.
 
-# git clone https://github.com/Kanak3117/qa-platform-backend
+## AI endpoints
 
-# cd qa-platform-backend
+All routes require an authenticated project member unless noted. Replace `PROJECT_UUID` with an active project ID and send a bearer access token.
 
-# ```
+- `POST /api/projects/{project_id}/ai/analyze` analyzes a report and compares it with project bug records.
+- `POST /api/projects/{project_id}/ai/bugs/{bug_id}/analyze` analyzes and saves advisory fields in `bug_ai_analyses` without changing the bug itself.
+- `POST /api/projects/{project_id}/ai/evaluate` runs a QA-engineer-labeled evaluation against project bug records.
 
-# 
+The sample evaluation dataset has ten cases and is intended for an initial smoke check, not as a statistically representative accuracy benchmark. Duplicate metrics require reviewed duplicate labels. See [`docs/AI_MODULE.md`](docs/AI_MODULE.md) before reporting accuracy.
 
-# 2\. Create and activate a virtual environment (Windows PowerShell):
+## Verification
 
-# 
+Backend tests:
 
-# ```
+```sh
+python -m unittest discover -s tests -v
+```
 
-# python -m venv venv
+Frontend type-check and production build:
 
-# venv\\Scripts\\Activate.ps1
+```sh
+cd frontend
+npm ci
+npm run build
+```
 
-# ```
-
-# 
-
-# If scripts are blocked, run `Set-ExecutionPolicy -Scope Process Bypass` first.
-
-# 
-
-# 3\. Install dependencies:
-
-# 
-
-# ```
-
-# pip install -r requirements.txt
-
-# ```
-
-# 
-
-# 4\. Create an empty PostgreSQL database named `qa\_platform`:
-
-# 
-
-# ```
-
-# CREATE DATABASE qa\_platform;
-
-# ```
-
-# 
-
-# 5\. Copy `.env.example` to `.env` and fill in your own values (`.env` is not committed):
-
-# 
-
-# ```
-
-# DATABASE\_URL=postgresql+psycopg://postgres:YOUR\_PASSWORD@localhost:5432/qa\_platform
-
-# SECRET\_KEY=<random string>
-
-# ALGORITHM=HS256
-
-# ACCESS\_TOKEN\_EXPIRE\_MINUTES=60
-
-# ```
-
-# 
-
-# Generate a secret key with `python -c "import secrets; print(secrets.token\_hex(32))"`. Avoid special characters such as `@ : / #` in the database password.
-
-# 
-
-# 6\. Create the tables:
-
-# 
-
-# ```
-
-# alembic upgrade head
-
-# ```
-
-# 
-
-# 7\. Start the server:
-
-# 
-
-# ```
-
-# uvicorn app.main:app --reload
-
-# ```
-
-# 
-
-# 8\. Open http://127.0.0.1:8000/docs for the Swagger UI.
-
-# 
-
-# 9\. New users are created with the `USER` role. To make the first Admin (after registering):
-
-# 
-
-# ```
-
-# python -m app.make\_admin your-email@example.com
-
-# ```
-
-# 
-
-# \## Project structure
-
-# 
-
-# ```
-
-# app/
-
-# &#x20; main.py             app entry point, routers are registered here
-
-# &#x20; make\_admin.py       script to promote a user to Admin
-
-# &#x20; core/               config (.env), database session, security (hashing, JWT)
-
-# &#x20; models/             SQLAlchemy models (users, projects, project\_members)
-
-# &#x20; schemas/            request and response schemas (validation)
-
-# &#x20; api/deps.py         reusable dependencies (auth and permissions)
-
-# &#x20; api/routes/         endpoints (auth, users, projects, members)
-
-# alembic/              database migrations
-
-# ```
-
-# 
-
-# \## Implemented endpoints
-
-# 
-
-# | Method | Endpoint | Access |
-
-# |---|---|---|
-
-# | POST | /api/auth/register | Public |
-
-# | POST | /api/auth/login | Public (returns JWT) |
-
-# | GET | /api/auth/me | Logged in |
-
-# | GET | /api/users/ | Admin |
-
-# | PATCH | /api/users/{user\_id} | Admin |
-
-# | POST | /api/projects/ | Admin |
-
-# | GET | /api/projects/ | Logged in (Admin sees all, others see their projects) |
-
-# | GET | /api/projects/{project\_id} | Project member or Admin |
-
-# | PATCH | /api/projects/{project\_id} | Admin |
-
-# | DELETE | /api/projects/{project\_id} | Admin (soft delete) |
-
-# | POST | /api/projects/{project\_id}/members/ | Admin |
-
-# | GET | /api/projects/{project\_id}/members/ | Project member or Admin |
-
-# | PATCH | /api/projects/{project\_id}/members/{member\_id} | Admin |
-
-# | DELETE | /api/projects/{project\_id}/members/{member\_id} | Admin |
-
-# 
-
-# \## Roles and permissions
-
-# 
-
-# \- System role (`users.system\_role`): `ADMIN` or `USER`. Admins can manage users, projects and members.
-
-# \- Project role (`project\_members.project\_role`): `QA\_ENGINEER`, `DEVELOPER` or `STAKEHOLDER`. Being a member gives access to that project only, not Admin rights.
-
-# 
-
-# \## Guide for teammates
-
-# 
-
-# \- Reusable dependencies live in `app/api/deps.py`:
-
-# &#x20; - `get\_current\_user` returns the logged-in user from the JWT.
-
-# &#x20; - `require\_admin` allows Admins only.
-
-# &#x20; - `require\_project\_role(...)` checks project membership. With no arguments any member passes, or pass roles such as `ProjectRole.QA\_ENGINEER`. Admins always pass. The route must have a path parameter named `project\_id`.
-
-# \- Add new models in `app/models/` (one file per area) and import them in `app/models/\_\_init\_\_.py` so Alembic sees them.
-
-# \- Run `git pull` before creating a migration with `alembic revision --autogenerate -m "message"`, to avoid conflicting migrations.
-
+GitHub Actions runs both checks on pull requests.
